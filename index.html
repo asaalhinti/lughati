@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#E3F4FF">
 <link rel="apple-touch-icon" href="https://media.hallah.ai/eaf7cd8e-a1af-4f9b-a7f7-358d28aae517/generated/2e0c267c-436c-4b10-a0a5-7051310e6bfc.png">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.__fbReady=window.__fbReady||new Promise(function(r){ window.__fbResolve=r; }); window.FIREBASE_CONFIG=window.FIREBASE_CONFIG||{"apiKey": "AIzaSyBfnSOcsqPgFylFPLCu3PyY26nXZWmXskw", "authDomain": "lughati-sadeem.firebaseapp.com", "projectId": "lughati-sadeem", "storageBucket": "lughati-sadeem.firebasestorage.app", "messagingSenderId": "60025659390", "appId": "1:60025659390:web:09653f4dff0186095baaaf"};</script>
+<script>window.PARENT_ONLY=/*PARENT_ONLY*/false/*END_PARENT_ONLY*/; window.__fbReady=window.__fbReady||new Promise(function(r){ window.__fbResolve=r; }); window.FIREBASE_CONFIG=window.FIREBASE_CONFIG||{"apiKey": "AIzaSyBfnSOcsqPgFylFPLCu3PyY26nXZWmXskw", "authDomain": "lughati-sadeem.firebaseapp.com", "projectId": "lughati-sadeem", "storageBucket": "lughati-sadeem.firebasestorage.app", "messagingSenderId": "60025659390", "appId": "1:60025659390:web:09653f4dff0186095baaaf"};</script>
 <script type="module">
 if (!window.FB) try{
   const [{initializeApp},fs] = await Promise.all([
@@ -1712,7 +1712,17 @@ const Family = {
   set(c){ try{ const v=String(c||'').toUpperCase().replace(/[^A-Z0-9]/g,''); localStorage.setItem('lg_family', v); const u=new URL(location.href); if(v && v!=='LOCAL') u.searchParams.set('f', v); else u.searchParams.delete('f'); history.replaceState(null,'',u.pathname+u.search+u.hash); }catch(e){} },
   clear(){ try{ localStorage.removeItem('lg_family'); const u=new URL(location.href); u.searchParams.delete('f'); history.replaceState(null,'',u.pathname+u.search+u.hash); }catch(e){} },
   gen(){ let out=''; const a=new Uint32Array(12); crypto.getRandomValues(a); for(const n of a) out+=this.ALPHA[n%this.ALPHA.length]; return out; },
-  link(code){ return location.origin + location.pathname + '?f=' + (code||this.code()); }
+  /* رابط اللعبة (جهاز البنت) ورابط لوحة بابا — صفحتان منفصلتان على نفس الموقع */
+  base(){ let p=location.pathname.replace(/[^/]*$/,''); p=p.replace(/parent\/$/,''); return location.origin + p; },
+  link(code){ return this.childLink(code); },
+  q(code){ const c=code||this.code(); return (c && c!=='LOCAL') ? '?f='+c : ''; },
+  childLink(code){ return this.base() + this.q(code); },
+  parentLink(code){ return this.base() + 'parent/' + this.q(code); }
+};
+const PARENT_ONLY = !!window.PARENT_ONLY;
+const Unlock = {
+  ok(){ try{ return sessionStorage.getItem('lg_unlocked')==='1'; }catch(e){ return false; } },
+  set(v){ try{ if(v) sessionStorage.setItem('lg_unlocked','1'); else sessionStorage.removeItem('lg_unlocked'); }catch(e){} }
 };
 
 /* ===================== محوّل Firestore: نفس واجهة قاعدة بيانات الصفحة (doc/collection) ===================== */
@@ -2387,6 +2397,7 @@ const TOTAL_MAX = () => CONTENT.units.reduce((a,u)=>a+unitMax(u),0) + introMax()
 
 /* ===================== الشاشة الرئيسية ===================== */
 function render(){
+  if (PARENT_ONLY && S.screen!=='setup' && S.screen!=='parent') return renderParentLock();
   if (S.screen==='home') renderHome();
   else if (S.screen==='unit') renderUnit(S.nav[0]);
   else if (S.screen==='lesson') renderLesson(S.nav[0]);
@@ -2404,8 +2415,7 @@ function topbar(){
     h('span',{class:'chip'}, '👧 ', childName()),
     h('span',{class:'chip stars'}, '⭐ ', h('span',{class:'num'}, p.totalStars||0)),
     p.streak && p.streak.days>1 ? h('span',{class:'chip'}, '🔥 ', h('span',{class:'num'}, p.streak.days), ' أيام') : null,
-    h('span',{class:'spacer'}),
-    h('button',{class:'icon-btn', title:'لوحة بابا', 'aria-label':'لوحة بابا', onclick:()=>askPin('رَمْزُ بَابَا السِّرِّيّ 🔐', ()=>go('parent','hub'))},'👨‍👧')
+    h('span',{class:'spacer'})
   );
 }
 function nakhlaBar(){
@@ -2486,7 +2496,7 @@ function renderHome(){
     ...parentBubble(),
     weekPlanBubble(),
     nakhlaBar(),
-    S.mode!=='db' ? h('div',{class:'banner'}, S.fb ? '⚠️ لبابا: هذا الجهاز يلعب محليًا. للربط: لوحة بابا ← الإعدادات ← ربط هذا الجهاز بعائلة.' : '⚠️ لبابا: النتائج تنحفظ على هذا الجهاز فقط. افتح الرابط وأنت مسجّل دخولك بحسابك عشان توصل النتائج للوحة.') : null,
+    S.mode!=='db' ? h('div',{class:'banner'}, S.fb ? '⚠️ لبابا: هذا الجهاز يلعب محليًا. للربط: افتح رابط لوحة بابا ← الإعدادات ← ربط هذا الجهاز بعائلة.' : '⚠️ لبابا: النتائج تنحفظ على هذا الجهاز فقط. افتح الرابط وأنت مسجّل دخولك بحسابك عشان توصل النتائج للوحة.') : null,
     h('div',{class:'grid'},
       worldCard('cintro','🔤', CONTENT.intro.title, 'أَلْعَابٌ سَرِيعَةٌ', Math.round(100*introStars()/introMax()), ()=>go('intro'), false, 'intro'),
       ...CONTENT.units.map(u=>worldCard('c'+u.n, u.icon, u.title, `الْوَحْدَةُ ${['الْأُولَى','الثَّانِيَةُ','الثَّالِثَةُ','الرَّابِعَةُ'][u.n-1]}`, Math.round(100*unitStars(u)/unitMax(u)), ()=>enterUnit(u), false, u.key)),
@@ -3134,7 +3144,7 @@ function renderSetup(){
         if(pin1!==pin2){ err.textContent='الرمزان غير متطابقين'; return; }
         const hash=await sha256(pin1);
         S.settings=Object.assign({}, DEFAULT_SETTINGS, S.settings||{}, {childName:nm, pinHash:hash, dailyGoalMin:clamp(parseInt(goal.value)||15,5,60), reward:{name:rwName.value.trim(), stars:clamp(parseInt(rwStars.value)||60,10,500)}, createdAt:Date.now()});
-        await Store.set('settings', S.settings); Log.ev({k:'setup_done'}); toast('تم الإعداد ✅'); go('home');
+        await Store.set('settings', S.settings); Log.ev({k:'setup_done'}); toast('تم الإعداد ✅'); if (PARENT_ONLY){ Unlock.set(true); go('parent','hub'); } else go('home');
       }},'ابْدَأِ الرِّحْلَةَ 🚀'))));
 }
 
@@ -3229,9 +3239,12 @@ function recordingsGallery(limit=12){
 function renderParent(tab='hub'){
   S.screen='parent'; S.nav=[tab];
   const sec=PSECTIONS.find(x=>x.key===tab);
-  const exitBtn=h('button',{class:'icon-btn', onclick:()=>{ _unsubP.forEach(u=>u()); _unsubP=[]; go('home'); },'aria-label':'رجوع للعبة', title:'رجوع للعبة'},'🎮');
+  const leave=()=>{ _unsubP.forEach(u=>u()); _unsubP=[]; if (PARENT_ONLY) Unlock.set(false); go('home'); };
+  const exitBtn=PARENT_ONLY
+    ? h('button',{class:'icon-btn', onclick:leave,'aria-label':'قفل اللوحة', title:'قفل اللوحة'},'🔒')
+    : h('button',{class:'icon-btn', onclick:leave,'aria-label':'رجوع للعبة', title:'رجوع للعبة'},'🎮');
   const head = !sec
-    ? h('div',{class:'topbar'}, h('button',{class:'icon-btn', onclick:()=>{ _unsubP.forEach(u=>u()); _unsubP=[]; go('home'); },'aria-label':'رجوع'},'→'), h('div',{style:'flex:1;min-width:0'}, h('h2',{},'👨‍👧 لوحة بابا'), h('p',{class:'tiny'}, 'متابعة ', childName(), ' · ', S.mode==='db'?'🟢 متزامن مع جهازها':'🟡 هذا الجهاز فقط')))
+    ? h('div',{class:'topbar'}, PARENT_ONLY ? null : h('button',{class:'icon-btn', onclick:leave,'aria-label':'رجوع'},'→'), h('div',{style:'flex:1;min-width:0'}, h('h2',{},'👨‍👧 لوحة بابا'), h('p',{class:'tiny'}, 'متابعة ', childName(), ' · ', S.mode==='db'?'🟢 متزامن مع جهازها':'🟡 هذا الجهاز فقط')), PARENT_ONLY ? exitBtn : null)
     : h('div',{class:'topbar'}, h('button',{class:'icon-btn', onclick:()=>renderParent('hub'), 'aria-label':'رجوع', title:'رجوع للوحة'},'→'), h('div',{style:'flex:1;min-width:0'}, h('h2',{}, sec.icon,' ',sec.title), h('p',{class:'tiny'}, sec.desc)), exitBtn);
   const body=h('div',{class:'stack'}, h('div',{class:'empty'},'جارٍ التحميل…'));
   mount(h('div',{class:'screen'}, head, body));
@@ -3470,13 +3483,28 @@ function tabSettings(){
     h('div',{class:'card stack'}, h('h3',{},'تغيير الرمز السري'), h('button',{class:'btn', onclick:()=>askPin('أدخل الرمز الجديد', async(hash)=>{ S.settings.pinHash=hash; await Store.set('settings', S.settings); toast('تغيّر الرمز ✅'); }, {setup:true})},'🔐 رمز جديد')),
     (S.blobMode==='fs' || S.fb) ? h('div',{class:'card stack'}, h('h3',{},'🔗 ربط الأجهزة (رمز العائلة)'),
       Family.code() && Family.code()!=='LOCAL' ? h('div',{class:'stack'}, h('p',{class:'small'},'رمز العائلة السري لهذا الجهاز:'), h('p',{class:'ltr', style:'font-size:1.5rem;font-weight:800;letter-spacing:3px;text-align:center'}, Family.code()),
-        h('p',{class:'small'},'افتح هذا الرابط على جهاز البنت (أو أي جهاز) وبيرتبط تلقائيًا بنفس العائلة:'), h('p',{class:'ltr tiny', style:'word-break:break-all'}, Family.link()),
-        h('div',{class:'row'}, h('button',{class:'btn btn-sm btn-sky', onclick:async()=>{ try{ await navigator.clipboard.writeText(Family.link()); toast('نُسخ الرابط ✅'); }catch(e){ toast('انسخه يدويًا من الأعلى'); } }},'📋 نسخ رابط الربط'), navigator.share? h('button',{class:'btn btn-sm', onclick:()=>navigator.share({title:'رحلة لغتي', url:Family.link()}).catch(()=>{})},'📤 مشاركة'):null),
+        h('p',{class:'small'},'🎮 رابط اللعبة (لجهاز البنت) — افتحه مرة واحدة على جهازها وبيرتبط تلقائيًا:'), h('p',{class:'ltr tiny', style:'word-break:break-all'}, Family.childLink()),
+        h('div',{class:'row'}, h('button',{class:'btn btn-sm btn-sky', onclick:async()=>{ try{ await navigator.clipboard.writeText(Family.childLink()); toast('نُسخ رابط اللعبة ✅'); }catch(e){ toast('انسخه يدويًا من الأعلى'); } }},'📋 نسخ رابط اللعبة'), navigator.share? h('button',{class:'btn btn-sm', onclick:()=>navigator.share({title:'رحلة لغتي', url:Family.childLink()}).catch(()=>{})},'📤 مشاركة'):null),
+        h('p',{class:'small', style:'margin-top:6px'},'👨‍👧 رابط لوحة بابا (لجوالك فقط) — لا يظهر في جهاز البنت:'), h('p',{class:'ltr tiny', style:'word-break:break-all'}, Family.parentLink()),
+        h('div',{class:'row'}, h('button',{class:'btn btn-sm btn-sky', onclick:async()=>{ try{ await navigator.clipboard.writeText(Family.parentLink()); toast('نُسخ رابط اللوحة ✅'); }catch(e){ toast('انسخه يدويًا من الأعلى'); } }},'📋 نسخ رابط اللوحة'), navigator.share? h('button',{class:'btn btn-sm', onclick:()=>navigator.share({title:'لوحة بابا — رحلة لغتي', url:Family.parentLink()}).catch(()=>{})},'📤 مشاركة'):null),
         h('p',{class:'tiny'},'حالة هذا الجهاز: ', S.mode==='db'?'🟢 متصل ومتزامن':'🟡 غير متصل (تحقق من الإنترنت)'))
       : h('div',{class:'stack'}, h('p',{class:'small'},'هذا الجهاز يلعب محليًا بدون ربط.'), h('button',{class:'btn btn-sm', onclick:()=>{ Family.clear(); location.reload(); }},'ربط هذا الجهاز بعائلة'))) :
-    h('div',{class:'card stack'}, h('h3',{},'كيف يعمل الربط؟'), h('p',{class:'small'},'افتح هذا الرابط على جهاز البنت وأنت مسجّل دخولك بحسابك نفسه (مرة واحدة)، ثم افتحه على جوالك واضغط 👨‍👧. كل ما تسويه البنت يوصلك هنا خلال ثوانٍ.'), h('p',{class:'small'}, 'حالة هذا الجهاز: ', S.mode==='db'?'🟢 متصل بقاعدة البيانات':'🟡 محلي فقط (غير مسجّل دخول)')),
+    h('div',{class:'card stack'}, h('h3',{},'كيف يعمل الربط؟'), h('p',{class:'small'},'افتح رابط اللعبة على جهاز البنت وأنت مسجّل دخولك بحسابك نفسه (مرة واحدة)، وافتح رابط لوحة بابا على جوالك. كل ما تسويه البنت يوصلك هنا خلال ثوانٍ.'), h('p',{class:'small'}, 'حالة هذا الجهاز: ', S.mode==='db'?'🟢 متصل بقاعدة البيانات':'🟡 محلي فقط (غير مسجّل دخول)')),
     h('div',{class:'card stack'}, h('h3',{style:'color:var(--bad)'},'منطقة الخطر'), h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:()=>openSheet(h('div',{class:'stack'}, h('h3',{},'تأكيد إعادة التعيين'), h('p',{class:'small'},'سيُمسح التقدم والنجوم وصندوق الأخطاء والاعتمادات والرسائل. الجلسات السابقة تبقى في الأرشيف. الإعدادات والرمز يبقيان.'), h('div',{class:'row'}, h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:async()=>{ S.progress=Progress.blank(); S.mistakes={items:{}}; S.child={pending:[],notes:[],handwriting:[],seenMsgs:{}}; S.parent={messages:[],mission:null,ratings:{},taskConfirms:{},weekPlan:(S.parent||{}).weekPlan||null}; await Promise.all([Store.set('progress',S.progress),Store.set('mistakes',S.mistakes),Store.set('child',S.child),Store.set('parent',S.parent)]); closeSheet(); toast('تمت إعادة التعيين'); renderParent('settings'); }},'نعم، امسح'), h('button',{class:'btn btn-sm', onclick:closeSheet},'إلغاء'))))},'🗑️ إعادة تعيين التقدم'))
   ];
+}
+
+/* ===================== شاشة القفل (صفحة لوحة بابا المستقلة) ===================== */
+function renderParentLock(){
+  S.screen='home'; S.nav=[];
+  const open=()=>askPin('رَمْزُ بَابَا السِّرِّيّ 🔐', ()=>{ Unlock.set(true); go('parent','hub'); });
+  mount(h('div',{class:'screen'},
+    h('div',{class:'hero'}, h('div',{class:'mascot', html:MASCOT_HTML}), h('div',{}, h('h1',{},'لوحة بابا 👨‍👧'), h('p',{class:'small'}, 'متابعة ', childName(), ' · ', S.mode==='db' ? '🟢 متزامن مع جهازها' : '🟡 هذا الجهاز فقط'))),
+    h('div',{class:'card stack'}, h('p',{class:'small'},'هذه الصفحة لبابا فقط. اللعبة على رابط آخر لا تظهر فيه هذه اللوحة.'),
+      h('button',{class:'btn btn-primary', id:'p-unlock', onclick:open},'🔐 فتح اللوحة')),
+    h('div',{class:'card sand stack'}, h('h3',{},'🎮 رابط اللعبة (لجهاز البنت)'), h('p',{class:'ltr tiny', style:'word-break:break-all'}, Family.childLink()),
+      h('div',{class:'row'}, h('button',{class:'btn btn-sm', onclick:async()=>{ try{ await navigator.clipboard.writeText(Family.childLink()); toast('نُسخ رابط اللعبة ✅'); }catch(e){ toast('انسخه يدويًا'); } }},'📋 نسخ'), h('a',{class:'btn btn-sm', href:Family.childLink(), target:'_blank', rel:'noopener'},'↗ فتح اللعبة')))
+  ));
 }
 
 /* ===================== الإقلاع ===================== */
@@ -3484,7 +3512,6 @@ async function boot(){
   TTS.init(); Say.init(); mountClock();
   for (const k of ['settings','progress','mistakes','child','parent']) S[k]=Store.lget(k);
   Progress.ensure(); Mistakes.ensure(); Child.ensure(); Parent.ensure();
-  const wantParent = location.hash==='#parent';
   if (!S.settings || !S.settings.pinHash) S.screen='setup'; else S.screen='home';
   render();
   const mode = await Store.init();
@@ -3506,11 +3533,14 @@ async function boot(){
     if (!S.settings || !S.settings.pinHash) S.screen='setup'; else if (S.screen==='setup') S.screen='home';
     if (!document.querySelector('.game')) render();
   }
+  if (PARENT_ONLY){
+    /* صفحة لوحة بابا: لا تُسجَّل كجلسة لعب، وتفتح مباشرة على اللوحة إذا كانت مفتوحة في هذه الجلسة */
+    if (S.settings && S.settings.pinHash && S.screen!=='setup'){ if (Unlock.ok()) go('parent','hub'); else renderParentLock(); }
+    return;
+  }
   try{ Log.ev({k:'open'}); }catch(e){}
-  if (wantParent && S.settings && S.settings.pinHash) askPin('رَمْزُ بَابَا السِّرِّيّ 🔐', ()=>go('parent','hub'), {onCancel:()=>{ try{ const u=new URL(location.href); u.searchParams.delete('parent'); u.hash=''; history.replaceState(null,'',u.pathname+u.search); }catch(e){} }});
   await applyParentRatings();
 }
-window.addEventListener('hashchange', ()=>{ if(location.hash==='#parent' && S.settings && S.settings.pinHash && S.screen!=='parent') askPin('رَمْزُ بَابَا السِّرِّيّ 🔐', ()=>go('parent','hub')); });
 boot();
 
 /* ===================== شاشة رمز العائلة (النسخة المستقلة) ===================== */
