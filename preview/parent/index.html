@@ -409,13 +409,14 @@ audio{width:100%;max-width:520px;height:44px}
 .pill.ind{background:#E4F5E1;color:#1b5e20}.pill.help{background:#FFF1D6;color:#8a4b00}.pill.shown{background:#FDE3E3;color:#b71c1c}
 
 /* ===== كتابي: صفحات الكتاب نفسه داخل اللعبة ===== */
-.k-strip{position:relative;overflow:hidden;width:100%;background:#fff;border:2px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+/* بلا حدّ ولا حشو: نسب موضع الصورة (top/left %) تُحسب من ارتفاع وعرض الصندوق نفسه فتكون القصّة دقيقة */
+.k-strip{position:relative;overflow:hidden;width:100%;background:#fff;border:0;padding:0;border-radius:14px;box-shadow:0 0 0 2px var(--line),var(--shadow)}
 .k-strip:not(.ready){background:linear-gradient(100deg,#EEF4FA 40%,#FFFFFF 50%,#EEF4FA 60%);background-size:200% 100%;animation:kshim 1.3s linear infinite}
 @keyframes kshim{to{background-position:-200% 0}}
 .k-img{position:absolute;max-width:none;height:auto;display:block;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;-webkit-touch-callout:none;pointer-events:none}
 .k-miss{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:8px 14px;font-size:.95rem;font-weight:700;color:#8a4b00;background:var(--sand);white-space:normal;line-height:1.6}
 .k-strips{display:flex;flex-direction:column;gap:8px}
-.k-strip.mini{border-width:1px;border-radius:10px;box-shadow:none}
+.k-strip.mini{border-radius:10px;box-shadow:0 0 0 1px var(--line)}
 .k-instr{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .k-sayb{flex:none;width:46px;height:46px;border-radius:50%;border:2px solid var(--sand-2);background:#fff;font-size:1.25rem;box-shadow:var(--shadow)}
 .k-sayb.speaking{animation:speakPulse .9s ease-in-out infinite;box-shadow:0 0 0 4px rgba(255,170,60,.35)}
@@ -3589,7 +3590,7 @@ const KITAB = {
             say:'اقْرَئِي نَصَّ الدَّرْسِ بِصَوْتٍ وَاضِحٍ. اضْغَطِي: بَدَأْتُ الْقِرَاءَةَ، وَسَأُسَجِّلُ صَوْتَكِ لِبَابَا.'} ] },
         { key:'k-quiz', icon:'🔍', title:'الْفَهْمُ وَالِاسْتِيعَابُ: أُجِيبُ', sub:'أُجِيبُ شَفَهِيًّا بِصَوْتِي', pg:'١٠٧', skill:'comp',
           tip:'فِي كِتَابِكِ: أُجِيبُ شَفَهِيًّا. اقْرَئِي كُلَّ سُؤَالٍ، ثُمَّ أَجِيبِي بِصَوْتِكِ وَسَأُسَجِّلُهُ لِبَابَا.',
-          steps:[ [.286,.344],[.348,.407],[.411,.470],[.474,.533],[.537,.596],[.600,.658],[.662,.721],[.725,.784],[.788,.886] ].map((y,i)=>({t:'rec', label:`أجيب: السؤال ${toArK(i+1)}`, hint:true, strips:[kS(107,y[0],y[1],.10,.84)],
+          steps:[ [.293,.340],[.353,.404],[.418,.465],[.482,.529],[.544,.591],[.605,.656],[.669,.717],[.734,.780],[.794,.881] ].map((y,i)=>({t:'rec', label:`أجيب: السؤال ${toArK(i+1)}`, hint:true, strips:[kS(107,y[0],y[1],.10,.84)],
             say: i===0? 'اقْرَئِي السُّؤَالَ، ثُمَّ اضْغَطِي الْمَايْك وَأَجِيبِي بِصَوْتِكِ.' : null})) },
         { key:'k-vocab', icon:'💎', title:'الْفَهْمُ وَالِاسْتِيعَابُ: أُنَمِّي لُغَتِي', sub:'أَخْتَارُ، أَصِلُ، أُكْمِلُ بِقَلَمِي', pg:'١٠٨', skill:'vocab',
           tip:'أَوَّلًا تَخْتَارِينَ الْمَعْنَى وَالضِّدَّ، ثُمَّ تَكْتُبِينَ فِي صَفْحَةِ كِتَابِكِ بِقَلَمِكِ.',
@@ -3599,7 +3600,7 @@ const KITAB = {
               {t:'mcq', q:'أَخْتَارُ الْمَعْنَى الصَّحِيحَ لِلْكَلِمَةِ:\n(أَعْتَزُّ)', say:'أَعْتَزُّ', opts:['أَفْتَخِرُ','أُحِبُّ'], a:0},
               {t:'mcq', q:'أَصِلُ الْكَلِمَةَ بِضِدِّهَا:\n(أُغَيِّرُ)', say:'أُغَيِّرُ', opts:['أُحَافِظُ','أُبَدِّلُ'], a:0},
             ]},
-            {t:'ink', label:'أنمي لغتي — في صفحة الكتاب', spec:[{t:'pg', p:108, y0:.115, y1:.895, x0:.06, x1:.94}],
+            {t:'ink', label:'أنمي لغتي — في صفحة الكتاب', spec:[{t:'pg', p:108, y0:.104, y1:.895, x0:.06, x1:.94}],
               say:'اكْتُبِي الْمَعْنَى فِي مَكَانِهِ، وَصِلِي الْكَلِمَةَ بِضِدِّهَا، ثُمَّ أَكْمِلِي خَرِيطَةَ الْمُفْرَدَةِ بِقَلَمِكِ.',
               key:'أشار إليه = دلّ عليه ؛ أعتزّ = أفتخر ؛ ضدّ أغيّر = أحافظ ؛ أعلام: نوعها اسم، مفردها عَلَم، ثم جملة من إنشائها.'},
           ] },
