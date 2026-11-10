@@ -447,6 +447,26 @@ audio{width:100%;max-width:520px;height:44px}
 .k-strip:not(.ready)::after,.ib-pg:not(.ready)::after{content:'⏳ جَارٍ فَتْحُ صَفْحَةِ الْكِتَابِ…';position:absolute;inset:0;display:grid;place-items:center;color:#6b7c93;font-size:.95rem;pointer-events:none}
 .ib-pg{position:relative}
 
+/* ---------- لوحة بابا: مراجعة النصوص والصوت ---------- */
+.rv{padding:10px 12px;display:flex;flex-direction:column;gap:8px;transition:background .15s,border-color .15s}
+.rv.ok{background:#E9F8F0;border-color:#22B573}
+.rv.bad{background:#FDECEC;border-color:#F04B4B}
+.rv.fixed{background:#EAF5FD;border-color:var(--sky)}
+.rv .rv-t{font-size:1.25rem;font-weight:700;line-height:1.7;min-width:0;overflow-wrap:anywhere}
+.rv-st{flex:none;font-size:.8rem;font-weight:800;border-radius:999px;padding:3px 10px;white-space:nowrap;color:#fff;background:#3B6FA8}
+.rv.ok .rv-st{background:#14804F} .rv.bad .rv-st{background:#D63333}
+.rv-b{min-height:46px;min-width:92px;padding:6px 16px;border-radius:999px;font-weight:800;font-size:1rem;border:2px solid;background:var(--surface);touch-action:manipulation;transition:transform .1s}
+.rv-b:active{transform:scale(.95)}
+.rv-b.y{border-color:#14804F;color:#117A4B} .rv-b.y.on{background:#14804F;color:#fff}
+.rv-b.n{border-color:#D63333;color:#C62F2F} .rv-b.n.on{background:#D63333;color:#fff}
+.rv-play{touch-action:manipulation}
+.rv-why{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rv-chip{min-height:38px;padding:5px 12px;border-radius:999px;border:2px solid var(--line);background:var(--surface);font-weight:700;font-size:.88rem;touch-action:manipulation}
+.rv-chip.on{background:#D63333;border-color:#D63333;color:#fff}
+.rv-note{font-size:.95rem;padding:8px 12px}
+.rv-prog{height:10px;background:var(--line);border-radius:999px;overflow:hidden}
+.rv-prog i{display:block;height:100%;width:0;background:var(--green);border-radius:999px;transition:width .25s}
+
 </style>
 </head>
 <body>
@@ -1711,7 +1731,8 @@ const Say = {
   el:null, unlocked:false, _pending:null,
   key(t){ return N(String(t)).replace(/[{}]/g,'').replace(/\s+/g,' ').trim(); },
   /* البحث عن المقطع: بالنص كما هو، ثم بعد حذف علامات الترقيم من الطرفين (كلمات القصة المضغوطة) */
-  src(t){ if(typeof AUDIO==='undefined') return null; const k=this.key(t); if(AUDIO[k]) return AUDIO[k]; const k2=k.replace(/^[،؛:.؟!«»()"'\s]+|[،؛:.؟!«»()"'\s]+$/g,''); return AUDIO[k2]||null; },
+  keyOf(t){ if(typeof AUDIO==='undefined') return null; const k=this.key(t); if(AUDIO[k]) return k; const k2=k.replace(/^[،؛:.؟!«»()"'\s]+|[،؛:.؟!«»()"'\s]+$/g,''); return AUDIO[k2]? k2 : null; },
+  src(t){ const k=this.keyOf(t); return k? AUDIO[k] : null; },
   has(t){ return !!this.src(t); },
   init(){
     if (this.el) return; this.el=new Audio(); this.el.preload='auto'; this.el.setAttribute('playsinline','');
@@ -1857,7 +1878,7 @@ const Blobs = {
 };
 
 const Store = {
-  db:null, chains:{}, pending:{}, unsubs:[],
+  db:null, chains:{}, pending:{}, failed:{}, unsubs:[],
   lget(k){ try{ const v=localStorage.getItem(LSP+k); return v?JSON.parse(v):null; }catch(e){ return null; } },
   lset(k,v){ try{ localStorage.setItem(LSP+k, JSON.stringify(v)); }catch(e){} },
   path(k){ return 'state/'+k; },
@@ -1891,14 +1912,16 @@ const Store = {
   async _drain(k){
     while (this.pending[k]){
       const d = this.pending[k]; this.pending[k]=null;
-      try{ await this.db.doc(this.path(k)).set(d); }
-      catch(e){ console.warn('db set',k,e); await sleep(1500); try{ await this.db.doc(this.path(k)).set(d); }catch(e2){ console.warn('db set retry failed',k); } }
+      try{ await this.db.doc(this.path(k)).set(d); this.failed[k]=false; }
+      catch(e){ console.warn('db set',k,e); await sleep(1500); try{ await this.db.doc(this.path(k)).set(d); this.failed[k]=false; }catch(e2){ console.warn('db set retry failed',k); this.failed[k]=true; } }
     }
     this.chains[k]=null;
   },
   subscribe(k, cb){
     if (this.db){
-      const u = this.db.doc(this.path(k)).onSnapshot(snap=>{ if(snap.exists){ const d=JSON.parse(JSON.stringify(snap.data())); this.lset(k,d); cb(d); } else cb(null); }, e=>console.warn('sub',k,e));
+      /* أثناء كتابتنا نحن لهذه الوثيقة يصلنا «صدى» كتابتنا بكائن جديد: نتجاهله، فما في الذاكرة أحدث منه
+         (استبدال الكائن كان يُضيّع ما يُعدَّل بعده عبر مراجع قديمة، وقد يُرجع الذاكرة لحالة أقدم إذا تلاحقت الضغطات). */
+      const u = this.db.doc(this.path(k)).onSnapshot(snap=>{ if (this.chains[k]) return; if(snap.exists){ const d=JSON.parse(JSON.stringify(snap.data())); this.lset(k,d); cb(d); } else cb(null); }, e=>console.warn('sub',k,e));
       this.unsubs.push(u); return u;
     }
     cb(this.lget(k)); return ()=>{};
@@ -3826,6 +3849,19 @@ function kUnit(ukey){ return (kOn() && KITAB.units[ukey]) || null; }
 function kUnitDef(ukey, key){ const U=kUnit(ukey); return U? (U.blocks.find(b=>b.key===key)||null) : null; }
 function kIntroDefs(){ return (kOn() && KITAB.intro.length)? KITAB.intro : null; }
 function kLibDefs(){ return (kOn() && KITAB.lib.length)? KITAB.lib : null; }
+/* كل ما يُنطق بصوت اللعبة في محطات «كتابي» (تلميح المحطة، تعليمات الخطوات، كلمات الألعاب) بترتيب الكتاب — لمراجعة بابا لما تسمعه البنت الآن */
+function kSpokenTexts(){
+  const out=[]; const add=t=>{ if(typeof t==='string' && /[؀-ۿ]/.test(t)) out.push(t); };
+  const defs=[...(kIntroDefs()||[])];
+  for (const u of CONTENT.units){ const U=kUnit(u.key); if(U) defs.push(...U.blocks); for (const l of u.lessons){ const L=kLesson(l.key); if(L) defs.push(...L.stations); } }
+  defs.push(...(kLibDefs()||[]));
+  for (const d of defs){ add(d.tip);
+    for (const st of d.steps||[]){ add(st.say);
+      if (st.t==='mem') for (const pr of st.pairs||[]){ add(pr.w); add(pr.m); }
+      if (st.t==='items') for (const it of st.items||[]){ add(it.say); if (it.t==='syll'||it.t==='build'||it.t==='spell') add(it.w); }
+      if (st.t==='sort') for (const it of (st.sort&&st.sort.items)||[]) add(it.w); } }
+  return out;
+}
 function kDefOf(path){
   const [a,b]=String(path||'').split('/'); if(!b || !b.startsWith('k-')) return null;
   if(a==='intro') return (kIntroDefs()||[]).find(d=>d.key===b)||null;
@@ -4281,6 +4317,7 @@ function renderParent(tab='hub'){
       _unsubP.push(Store.subscribe('child', d=>{ if(d){ S.child=d; restoreClassicKeys(); if(S.screen==='parent' && ['approvals','messages','hub'].includes(S.nav[0])) renderParent(S.nav[0]); } }));
       _unsubP.push(Store.subscribe('progress', d=>{ if(d){ S.progress=d; restoreClassicKeys(); } }));
     }
+    if (tab==='review'){ try{ await Review.load(); }catch(e){ console.warn('review load', e); } if (S.screen!=='parent' || S.nav[0]!=='review') return; }
     if (tab==='messages'){ Parent.ensure(); S.parent.seenNotes=S.parent.seenNotes||{}; let ch=false; for(const n of S.child.notes){ if(!S.parent.seenNotes[n.id]){ S.parent.seenNotes[n.id]=Date.now(); ch=true; } } if(ch) Parent.save(); }
     body.replaceChildren(...kids(({hub:tabHub, today:tabToday, plan:tabPlan, progress:tabProgress, mistakes:tabMistakes, approvals:tabApprovals, messages:tabMessages, settings:tabSettings, review:tabReview}[tab]||tabHub)()));
   })();
@@ -4551,37 +4588,161 @@ function renderParentLock(){
 }
 
 /* ---------- مراجعة النصوص والصوت (يراجعها بابا أو معلمة؛ لم تُراجَع آليًا للنطق) ---------- */
+/* علامات المراجعة في وثيقة مستقلة (state/review): لا تُثقل وثيقة بابا التي يستمع لها جهاز البنت، ولا تُمسح مع «إعادة تعيين التقدم».
+   كل المعالجات تقرأ Review.d لحظة الضغط لا مرجعًا مأخوذًا عند الرسم.
+   (الخلل السابق: العلامات كانت داخل S.parent، وصدى الحفظ يستبدل S.parent بكائن جديد، فتُكتب الضغطات التالية في كائن متروك وتضيع.) */
+const Review = {
+  d:null, seq:0, sub:null, onRemote:null,
+  norm(d){ d=(d && typeof d==='object' && !Array.isArray(d))? d : {}; for (const k of ['ok','bad']) if (!d[k] || typeof d[k]!=='object' || Array.isArray(d[k])) d[k]={}; return d; },
+  busy(){ return !!(Store.chains.review || Store.pending.review); },
+  /* علم «على هذا الجهاز ضغطات لم يؤكّد الخادم وصولها» (بلا اعتماد على ساعة الجهاز) */
+  dirty(v){ try{ if (v===undefined) return localStorage.getItem(LSP+'review_dirty')==='1'; if (v) localStorage.setItem(LSP+'review_dirty','1'); else localStorage.removeItem(LSP+'review_dirty'); }catch(e){} return false; },
+  /* يضيف إلى d ما في src من علامات غير موجودة فيه (لا يحذف ولا يغيّر الموجود) ويعيد عدد ما أضاف */
+  merge(d, src){ let n=0; for (const k of ['ok','bad']) for (const [id,v] of Object.entries((src && src[k])||{})) if (!d.ok[id] && !d.bad[id]){ d[k][id]=v; n++; } return n; },
+  async load(){
+    if (this.d && this.busy()) return this.d;                       /* كتابة في الطريق: ما في الذاكرة أحدث */
+    const local=Store.lget('review'), wasDirty=this.dirty(); let remote=null;
+    try{ remote=await Store.get('review'); }catch(e){}
+    const d=this.norm(remote); let push=false;
+    if (wasDirty && local){ if (this.merge(d, local)) push=true; else if (S.mode==='db') this.dirty(false); }   /* ضغطات من هذا الجهاز لم تصل الخادم */
+    /* ترحيل العلامات القديمة من وثيقة بابا */
+    Parent.ensure(); const old=S.parent.review;
+    if (old){ this.merge(d, old); delete S.parent.review; push=true; }
+    this.d=d;
+    if (push){ this.save(); if (old) Parent.save(); }               /* بدون انتظار الشبكة: الصفحة تُفتح حتى بلا اتصال */
+    return d;
+  },
+  save(){ if (!this.d) return Promise.resolve(); this.d.t=Date.now(); const my=++this.seq; this.dirty(true); const pr=Store.set('review', this.d); if (S.mode==='db') pr.then(()=>{ if (my===this.seq && !Store.failed.review) this.dirty(false); }); return pr; },
+  /* علامات وُضعت من جهاز آخر (جوال بابا ثم حاسوبه مثلًا) تصل هنا، فلا يكتب هذا الجهاز فوقها بنسخة قديمة. صدى كتابتنا نحن لا يصل (Store.subscribe يتجاهله). */
+  watch(cb){ this.onRemote=cb; if (this.sub || S.mode!=='db') return;
+    this.sub=Store.subscribe('review', r=>{ if (!r || this.busy()) return; const nd=this.norm(r); const keep= this.dirty() && this.d && this.merge(nd, this.d); this.d=nd; if (keep) this.save(); if (this.onRemote){ try{ this.onRemote(); }catch(e){} } }); }
+};
 function reviewItems(){
-  const out=[]; const add=(kind, text, sub)=>{ if(text) out.push({kind, text:N(text), sub:sub||''}); };
-  for (const [t] of Object.entries(typeof AUDIO==='undefined'?{}:AUDIO)) add(/\s/.test(t.trim())?'sent':'word', t);
+  const out=[]; const A=(typeof AUDIO==='undefined')? {} : AUDIO;
+  const add=(kind, text, sub, key)=>{ if(text) out.push({kind, text:N(text), sub:sub||'', key:key||null}); };
+  for (const t of Object.keys(A)) add(/\s/.test(t.trim())?'sent':'word', t, '', t);
   const qa=(where, it)=>{ if(!it) return; if(it.t==='mcq'||it.opts) add('qa', it.q, 'الجواب: '+N(it.opts[it.a])+' — '+where); else if(it.t==='order'||it.answer) add('qa', it.q||'ترتيب', 'الجواب: '+N(it.answer||'')+' — '+where); };
   for (const u of CONTENT.units){ (u.warmup.items||[]).forEach(i=>qa(u.title,i)); (u.listening.qs||[]).forEach(i=>qa(u.title,i));
     for (const l of u.lessons){ (l.quiz||[]).forEach(i=>qa(l.title,i)); for(const k of ['style','transform']) ((l[k]||{}).items||[]).forEach(i=>qa(l.title,i)); (l.express||[]).forEach(i=>qa(l.title,i)); ((l.phon||{}).items||[]).forEach(i=>add('qa', (l.phon.q||'')+' ('+i.w+')', 'الجواب: '+N(i.opts[i.a])+' — '+N(l.title))); (l.vocab||[]).forEach(v=>add('qa', v.w, 'المعنى: '+N(v.m)+(v.ant?' · الضد: '+N(v.ant):'')+' · النوع: '+v.type+' — '+N(l.title))); } }
   for (const s2 of CONTENT.library) (s2.qs||[]).forEach(i=>qa(s2.title,i));
+  /* ما يُنطق في محطات «كتابي» (ما تسمعه البنت الآن) يُعلَّم بترتيب الكتاب ليُراجَع أولًا */
+  const order=new Map(); if (typeof kSpokenTexts==='function'){ for (const t of kSpokenTexts()){ const k=Say.keyOf(t); if (k && !order.has(k)) order.set(k, order.size); } }
+  for (const it of out){ it.id=revId(it); if (it.key){ it.tok=String(A[it.key]||'').replace(/\.[a-z0-9]+(\?.*)?$/i,'').slice(-8)||1; if (order.has(it.key)) it.book=order.get(it.key); } else it.tok=1; }
   return out;
 }
 function revId(it){ let x=5381; const t=it.kind[0]+it.text+it.sub; for(let i=0;i<t.length;i++) x=((x<<5)+x+t.charCodeAt(i))>>>0; return x.toString(36); }
-let _revFilter='sent';
+/* حالة العنصر: ok / bad / fixed (عُدّل مقطعه بعد العلامة فيحتاج سماعًا جديدًا) / '' لم يُراجَع */
+function revState(it){ const d=Review.d; if(!d) return ''; const b=d.bad[it.id], o=d.ok[it.id]; if(!b && !o) return ''; const m= b? b.tok : o; if (it.key && typeof m==='string' && m!==it.tok) return 'fixed'; return b? 'bad' : 'ok'; }
+const REV_WHY={ a:[['say','🔊 النطق'],['tash','✍️ التشكيل'],['odd','🤖 صوت غريب أو مقطوع']], q:[['ans','❓ الجواب'],['q','📝 صياغة السؤال'],['tash','✍️ التشكيل']] };
+const REV_WHY_TXT={say:'النطق', tash:'التشكيل', odd:'صوت غريب أو مقطوع', ans:'الجواب', q:'صياغة السؤال'};
+const REV_PAGE=60;
+let _revScope='book', _revStatus='todo', _revAuto=false, _revPlaySeq=0, _revSaveSeq=0;
 function tabReview(){
-  Parent.ensure(); const R=S.parent.review=S.parent.review||{ok:{}, bad:{}};
-  const all=reviewItems(); const cnt=k=>all.filter(i=>i.kind===k).length; const done=all.filter(i=>R.ok[revId(i)]||R.bad[revId(i)]).length; const bad=all.filter(i=>R.bad[revId(i)]);
-  const filters=[['sent',`🔊 جمل (${cnt('sent')})`],['word',`🔊 كلمات (${cnt('word')})`],['qa',`❓ أسئلة وإجابات (${cnt('qa')})`],['bad',`✗ المعلَّم خطأ (${bad.length})`],['todo','لم تُراجَع']];
-  const list=all.filter(i=> _revFilter==='bad'? R.bad[revId(i)] : _revFilter==='todo'? !(R.ok[revId(i)]||R.bad[revId(i)]) : i.kind===_revFilter).slice(0,150);
-  const save=()=>Parent.save();
-  const rowEl=it=>{ const id=revId(it); const st=()=> R.bad[id]?'bad':R.ok[id]?'ok':''; const el=h('div',{class:'card', style:'padding:8px 12px'});
-    const draw=()=>{ el.style.borderColor= st()==='bad'?'var(--bad)':st()==='ok'?'var(--ok,#2E7D32)':''; };
-    const play= it.kind!=='qa' ? (()=>{ const b=h('button',{class:'btn btn-sm', onclick:()=>Say.speakUI(b, it.text)},'▶️ اسمع'); return b; })() : null;
-    const note=h('input',{placeholder:'ما الخطأ؟ (اختياري)', value:(R.bad[id]&&R.bad[id].note)||'', style:'flex:1;min-width:120px', onchange:e=>{ if(R.bad[id]){ R.bad[id].note=e.target.value; save(); } }});
-    el.append(h('p',{style:'font-size:1.25rem;font-weight:700'}, it.text), it.sub? h('p',{class:'small'}, it.sub):'', h('div',{class:'row'}, ...kids(play,
-      h('button',{class:'btn btn-sm btn-green', onclick:()=>{ delete R.bad[id]; R.ok[id]=1; save(); draw(); }},'✓ صحيح'),
-      h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:()=>{ delete R.ok[id]; R.bad[id]={text:it.text, sub:it.sub, kind:it.kind, note:note.value||''}; save(); draw(); }},'✗ خطأ'), note)));
-    draw(); return el; };
+  if (!Review.d) return [h('div',{class:'card stack'}, h('p',{},'تعذّر تحميل علامات المراجعة.'), h('button',{class:'btn btn-sm', onclick:()=>renderParent('review')},'🔄 حاول مرة ثانية'))];
+  const all=reviewItems(); const A=(typeof AUDIO==='undefined')? {} : AUDIO;
+  const scopes=[['book','📘 كتابي'],['sent','🔊 جمل'],['word','🔊 كلمات'],['qa','❓ أسئلة وإجابات'],['all','الكل']];
+  const inScope=(it, sc)=> sc==='all' || (sc==='book'? it.book!==undefined : it.kind===sc);
+  const nBook=all.filter(i=>inScope(i,'book')).length;
+  if (_revScope==='book' && !nBook) _revScope='sent';
+  const statuses=[['todo','الباقي'],['ok','✓ صحيح'],['bad','✗ خطأ'],['fixed','🔄 صُحِّحت']];
+  const inStatus=(it, st)=>{ const s=revState(it); return st==='todo'? (s===''||s==='fixed') : s===st; };
+
+  /* --- رأس الصفحة: يتحدّث مباشرة مع كل ضغطة --- */
+  const headTxt=h('b',{id:'rv-count'}), syncEl=h('span',{class:'tiny', id:'rv-sync'}), bar=h('i',{});
+  const scopeBtns=scopes.filter(([k])=>k!=='book'||nBook).map(([k,t])=>{ const b=h('button',{class:'tab', type:'button', role:'tab', 'data-sc':k, onclick:()=>{ _revScope=k; redraw(); }}, `${t} (${all.filter(i=>inScope(i,k)).length})`); b._k=k; return b; });
+  const statusBtns=statuses.map(([k,t])=>{ const b=h('button',{class:'tab', type:'button', role:'tab', 'data-st':k, onclick:()=>{ _revStatus=k; redraw(); }}); b._k=k; b._t=t; return b; });
+  const scopeRow=h('div',{class:'tabs', role:'tablist'}, ...scopeBtns), statusRow=h('div',{class:'tabs', role:'tablist'}, ...statusBtns);
+  let drawFns=[];
+  const fixedNote=h('button',{class:'btn btn-sm btn-sky', type:'button', hidden:true, onclick:()=>{ _revScope='all'; _revStatus='fixed'; redraw(); }});
+  const copyBtn=h('button',{class:'btn btn-sm btn-sky', type:'button', id:'rv-copy'}), shareBtn= navigator.share? h('button',{class:'btn btn-sm', type:'button'},'📤 مشاركة') : null;
+  const copyRow=h('div',{class:'row', hidden:true}, copyBtn, shareBtn);
+  const autoBox=h('input',{type:'checkbox', id:'rv-auto', checked:_revAuto, style:'width:auto', onchange:e=>{ _revAuto=e.target.checked; }});
+  const listBox=h('div',{class:'stack', id:'rv-list', style:'gap:10px'});
+
+  const errText=()=>{ const L=all.filter(i=>revState(i)==='bad'); return `أخطاء مراجعة «رحلة لغتي» — ${L.length}\n`+L.map((i,n)=>{ const b=Review.d.bad[i.id]; const why=(b.why||[]).map(k=>REV_WHY_TXT[k]||k).join('، '); return `${n+1}) [${i.kind==='qa'?'سؤال':'صوت'}] ${i.text}${i.sub?' | '+i.sub:''}${why?' | نوع الخطأ: '+why:''}${b.note?' | الملاحظة: '+b.note:''}`; }).join('\n'); };
+  const showText=txt=>{ const ta=h('textarea',{rows:8, readonly:true, style:'font-size:.9rem'}); ta.value=txt; openSheet(h('div',{class:'stack'}, h('h3',{},'قائمة الأخطاء'), h('p',{class:'small'},'حدّد النص كله وانسخه ثم الصقه في المحادثة.'), ta, h('button',{class:'btn btn-sm', onclick:closeSheet},'إغلاق'))); setTimeout(()=>{ try{ ta.focus(); ta.select(); }catch(e){} }, 50); };
+  copyBtn.onclick=async()=>{ const txt=errText(); try{ await navigator.clipboard.writeText(txt); toast('نُسخت ✅ — الصقها في المحادثة ليتم التصحيح', 3200); }catch(e){ showText(txt); } };
+  if (shareBtn) shareBtn.onclick=()=>{ navigator.share({text:errText()}).catch(()=>{}); };
+
+  const setSync=t=>{ syncEl.textContent=t; };
+  const persist=()=>{
+    const pr=Review.save(); const my=++_revSaveSeq;
+    if (S.mode!=='db'){ setSync('💾 محفوظ على هذا الجهاز'); return; }
+    setSync('⏳ يحفظ…');
+    const slow=setTimeout(()=>{ if (my===_revSaveSeq) setSync('📴 الاتصال ضعيف — محفوظ على جوالك ويُرفع تلقائيًا'); }, 6000);
+    pr.then(()=>{ clearTimeout(slow); if (my===_revSaveSeq) setSync(Store.failed.review? '⚠️ تعذّر الرفع — يُعاد مع الضغطة القادمة' : '☁️ محفوظ'); });
+  };
+  const refresh=()=>{
+    const cnt={ok:0,bad:0,fixed:0}; for (const i of all){ const s=revState(i); if(s) cnt[s]++; }
+    const done=cnt.ok+cnt.bad;
+    headTxt.textContent=`راجعت ${done} من ${all.length}`+(done? ` — ✓ ${cnt.ok} · ✗ ${cnt.bad}`:''); bar.style.width=(all.length? Math.round(1000*done/all.length)/10 : 0)+'%';
+    for (const b of scopeBtns){ const on= b._k===_revScope; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); }
+    const sc=all.filter(i=>inScope(i,_revScope));
+    for (const b of statusBtns){ const n=sc.filter(i=>inStatus(i,b._k)).length, on= b._k===_revStatus; b.textContent=`${b._t} (${n})`; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); b.hidden= b._k==='fixed' && !n && !on; }
+    copyRow.hidden=!cnt.bad; copyBtn.textContent=`📋 انسخ قائمة الأخطاء (${cnt.bad})`;
+    fixedNote.hidden=!cnt.fixed || _revStatus==='fixed'; fixedNote.textContent=`🔄 صُحِّح ${cnt.fixed} بعد ملاحظاتك — اضغط لتسمعها من جديد`;
+  };
+
+  /* --- تشغيل المقطع نفسه (بدون الرجوع لصوت الجهاز، حتى لا يُحكم على مقطع لم يُسمَع) --- */
+  const playClip=(btn, src)=> new Promise(res=>{
+    Say.init(); Say.stop(); const a=Say.el; const my=++_revPlaySeq;
+    document.querySelectorAll('.rv-play.speaking').forEach(x=>x.classList.remove('speaking')); btn.classList.add('speaking');
+    let fin_=false; const fin=ok=>{ if(fin_) return; fin_=true; const mine= my===_revPlaySeq; if(mine){ a.onended=null; a.onerror=null; btn.classList.remove('speaking'); } res(mine? ok : null); };
+    a.onended=()=>fin(true); a.onerror=()=>fin(false); a.playbackRate=1; a.src=src;
+    const p=a.play(); if (p && p.catch) p.catch(()=>fin(false)); setTimeout(()=>fin(true), 30000);
+  });
+
+  const rowEl=it=>{
+    const el=h('div',{class:'card rv', 'data-id':it.id});
+    const chip=h('span',{class:'rv-st', hidden:true}), prev=h('p',{class:'tiny', hidden:true});
+    const yes=h('button',{class:'rv-b y', type:'button'},'✓ صحيح'), no=h('button',{class:'rv-b n', type:'button'},'✗ خطأ');
+    const play= it.key? h('button',{class:'btn btn-sm rv-play', type:'button'},'▶️ اسمع') : null;
+    const note=h('input',{class:'rv-note', placeholder:'اكتب الصحيح أو وضّح (اختياري)', 'aria-label':'ملاحظة على الخطأ', enterkeyhint:'done', autocomplete:'off'});
+    const chips=REV_WHY[it.kind==='qa'?'q':'a'].map(([k,t])=>{ const c=h('button',{class:'rv-chip', type:'button'}, t); c.onclick=()=>{ const b=Review.d.bad[it.id]; if(!b) return; const s=new Set(b.why||[]); if(s.has(k)) s.delete(k); else s.add(k); b.why=[...s]; persist(); draw(); }; c._k=k; return c; });
+    const why=h('div',{class:'rv-why', hidden:true}, h('span',{class:'tiny'},'وين الخطأ؟'), ...chips, note);
+    const draw=()=>{
+      const st=revState(it), b=Review.d.bad[it.id];
+      el.classList.toggle('ok', st==='ok'); el.classList.toggle('bad', st==='bad'); el.classList.toggle('fixed', st==='fixed');
+      yes.classList.toggle('on', st==='ok'); no.classList.toggle('on', st==='bad'); yes.setAttribute('aria-pressed', String(st==='ok')); no.setAttribute('aria-pressed', String(st==='bad'));
+      chip.hidden=!st; chip.textContent= st==='ok'?'✓ صحيح' : st==='bad'?'✗ خطأ' : st==='fixed'?'🔄 صُحِّح — اسمعه من جديد' : '';
+      why.hidden= st!=='bad'; for (const c of chips){ const on=!!(b && (b.why||[]).includes(c._k)); c.classList.toggle('on', on); c.setAttribute('aria-pressed', String(on)); }
+      if (document.activeElement!==note) note.value=(b && b.note)||'';
+      const old= st==='fixed' && b ? [...(b.why||[]).map(k=>REV_WHY_TXT[k]||k), b.note].filter(Boolean).join(' · ') : '';
+      prev.hidden=!old; prev.textContent= old? 'ملاحظتك السابقة: '+old : '';
+    };
+    const mark=to=>{ const d=Review.d, st=revState(it), pb=d.bad[it.id];
+      delete d.ok[it.id]; delete d.bad[it.id];
+      if (st!==to){ if (to==='ok') d.ok[it.id]=it.tok; else d.bad[it.id]={text:it.text, sub:it.sub, kind:it.kind, note:(pb && pb.note)||'', why:(pb && pb.why)||[], tok:it.tok}; }
+      persist(); draw(); refresh(); return st!==to; };
+    yes.onclick=()=>{ if (mark('ok') && _revAuto) nextRow(el); };
+    no.onclick=()=>{ mark('bad'); };
+    note.onchange=()=>{ const b=Review.d.bad[it.id]; if(b){ b.note=note.value.trim(); persist(); } };
+    if (play){ el._play=async()=>{ const ok=await playClip(play, A[it.key]); if (ok===false) toast('تعذّر تشغيل المقطع — تحقّق من الإنترنت ومن مستوى الصوت', 3000); }; play.onclick=el._play; }
+    el.append(h('div',{class:'row between', style:'align-items:flex-start;flex-wrap:nowrap'}, h('p',{class:'rv-t'}, it.text), chip), it.sub? h('p',{class:'small'}, it.sub):null, prev, h('div',{class:'row', style:'gap:8px'}, play, yes, no), why);
+    drawFns.push(draw); draw(); return el; };
+  const nextRow=el=>{ const m=listBox.querySelector('#rv-more'); if (m && !m.hidden && el.nextElementSibling===m) m.click();
+    let n=el.nextElementSibling; while (n && !(n.classList.contains('rv') && !n.classList.contains('ok') && !n.classList.contains('bad'))) n=n.nextElementSibling; if(!n) return; try{ n.scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){} if (n._play) n._play(); };
+
+  const EMPTY={todo:'🎉 راجعت كل ما في هذا القسم.', ok:'ما علّمت شيئًا «صحيح» في هذا القسم بعد.', bad:'ما علّمت أخطاء في هذا القسم 👍', fixed:'لا شيء مُصحَّح ينتظر سماعك.'};
+  const redraw=()=>{
+    refresh(); drawFns=[];
+    let list=all.filter(i=>inScope(i,_revScope) && inStatus(i,_revStatus)); if (_revScope==='book') list=list.slice().sort((a,b)=>a.book-b.book);
+    let shown=0; const more=h('button',{class:'btn btn-sm', type:'button', id:'rv-more'});
+    const grow=()=>{ const part=list.slice(shown, shown+REV_PAGE); shown+=part.length; more.before(...part.map(rowEl)); const left=list.length-shown; more.hidden=!left; more.textContent=`عرض المزيد (باقي ${left})`; };
+    more.onclick=grow;
+    listBox.replaceChildren(...(list.length? [more] : [h('div',{class:'empty'}, EMPTY[_revStatus])])); if (list.length) grow();
+  };
+  setSync(S.mode==='db'? '☁️ متزامن' : '💾 على هذا الجهاز');
+  redraw();
+  Review.watch(()=>{ refresh(); for (const f of drawFns) f(); });
   return [
-    h('div',{class:'card stack'}, h('p',{class:'small'},`راجعت ${done} من ${all.length}. المقاطع الصوتية والنصوص لم يراجعها إنسان بعد: اسمع المقطع وقارنه بالنص المشكول، واقرأ السؤال وجوابه، وعلّم ✗ على أي خطأ في التشكيل أو النطق أو الجواب.`),
-      h('div',{class:'tabs'}, ...filters.map(([k,t])=>h('button',{class:'tab'+(k===_revFilter?' on':''), onclick:()=>{ _revFilter=k; renderParent('review'); }}, t))),
-      bad.length? h('button',{class:'btn btn-sm btn-sky', onclick:async()=>{ const txt=bad.map(i=>{ const b=R.bad[revId(i)]; return `[${i.kind==='qa'?'سؤال':'صوت'}] ${i.text}${i.sub?' | '+i.sub:''}${b.note?' | الملاحظة: '+b.note:''}`; }).join('\n'); try{ await navigator.clipboard.writeText(txt); toast('نُسخت قائمة الأخطاء ✅ — أرسلها للتصحيح'); }catch(e){ toast('تعذّر النسخ'); } }},`📋 نسخ قائمة الأخطاء (${bad.length})`):null),
-    ...(list.length? list.map(rowEl) : [h('div',{class:'empty'},'لا شيء في هذا القسم.')]),
-    list.length===150? h('p',{class:'tiny'},'يُعرض ١٥٠ عنصرًا في المرة. بعد مراجعتها اختر «لم تُراجَع» لعرض الباقي.'):null
+    h('div',{class:'card stack', style:'gap:10px'},
+      h('div',{class:'row between'}, headTxt, syncEl), h('div',{class:'rv-prog'}, bar),
+      h('p',{class:'small'},'اسمع المقطع وقارنه بالنص، ثم ✓ أو ✗. الأخطاء لا تُرسل تلقائيًا: انسخ قائمتها وأرسلها في المحادثة، وبعد التصحيح ترجع لك هنا تحت «🔄 صُحِّحت».'),
+      scopeRow, statusRow, fixedNote,
+      h('label',{class:'row small', style:'gap:8px', for:'rv-auto'}, autoBox, 'بعد ✓ شغّل المقطع التالي تلقائيًا'),
+      copyRow),
+    listBox
   ];
 }
 
@@ -4617,7 +4778,8 @@ async function boot(){
   if (restoreClassicKeys() && !PARENT_ONLY){ await Progress.save(); await Child.save(); if (!document.querySelector('.game')) render(); }
   if (PARENT_ONLY){
     /* صفحة لوحة بابا: لا تُسجَّل كجلسة لعب، وتفتح مباشرة على اللوحة إذا كانت مفتوحة في هذه الجلسة */
-    if (S.settings && S.settings.pinHash && S.screen!=='setup'){ if (Unlock.ok()) go('parent','hub'); else renderParentLock(); }
+    /* إن كان بابا قد دخل اللوحة وفتح قسمًا قبل اكتمال التحميل (شبكة بطيئة) فلا نرجعه للصفحة الرئيسية */
+    if (S.settings && S.settings.pinHash && S.screen!=='setup'){ if (!Unlock.ok()) renderParentLock(); else if (S.screen!=='parent') go('parent','hub'); }
     return;
   }
   try{ Log.ev({k:'open'}); }catch(e){}
@@ -4640,7 +4802,7 @@ function restoreClassicKeys(){
   }
   return ch;
 }
-boot();
+boot().finally(()=>{ S.booted=true; });
 
 /* ===================== شاشة رمز العائلة (النسخة المستقلة) ===================== */
 function renderFamilyGate(){
