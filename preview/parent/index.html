@@ -467,6 +467,16 @@ audio{width:100%;max-width:520px;height:44px}
 .rv-prog{height:10px;background:var(--line);border-radius:999px;overflow:hidden}
 .rv-prog i{display:block;height:100%;width:0;background:var(--green);border-radius:999px;transition:width .25s}
 
+/* ---------- قفل اللعبة ---------- */
+.lockcard{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:30px 18px;margin-top:6vh;border-width:3px;border-color:var(--sand-2);background:var(--sand)}
+.lockcard .lock-ic{font-size:4.2rem;line-height:1}
+.lockcard h2{font-size:1.7rem}
+.lockcard .lock-msg{font-size:1.3rem;font-weight:700;line-height:1.8;overflow-wrap:anywhere}
+.lockcard .lock-until{font-size:1.05rem;color:var(--muted);font-weight:700}
+.lockrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px}
+.lockrow.on{background:#FDECEC;border-color:var(--bad)}
+.lockrow .need-b{flex:1;min-width:170px;display:flex;flex-direction:column}
+
 </style>
 </head>
 <body>
@@ -2025,6 +2035,27 @@ const Parent = {
   ensure(){ if(!S.parent) S.parent={messages:[], mission:null, ratings:{}, taskConfirms:{}, weekPlan:null}; for(const k of ['messages']) if(!S.parent[k]) S.parent[k]=[]; if(!S.parent.ratings) S.parent.ratings={}; if(!S.parent.taskConfirms) S.parent.taskConfirms={}; if(S.parent.weekPlan===undefined) S.parent.weekPlan=null; if(!S.parent.seenNotes) S.parent.seenNotes={}; return S.parent; },
   save(){ this.ensure(); return Store.set('parent', S.parent); }
 };
+/* ===================== قفل اللعبة من لوحة بابا ===================== */
+/* S.parent.lock = {ts, until (0 = حتى يفتحها بابا), msg} — يصل جهاز البنت مع وثيقة بابا خلال ثوانٍ.
+   الشاشات كلها تُحجب بشاشة «اللعبة مقفلة» (render)، ومن كانت داخل محطة تكملها أولًا حتى لا يضيع شغلها ثم تُقفل. */
+const Lock = {
+  timer:null, shown:false, warned:0,
+  get(){ const l=S.parent && S.parent.lock; if (!l || !l.ts) return null; if (l.until && Date.now()>=l.until) return null; return l; },
+  on(){ return !!this.get(); },
+  /* يحجب شاشات اللعب فقط: لا يحجب لوحة بابا ولا الإعداد الأول */
+  blocks(){ return !PARENT_ONLY && S.screen!=='parent' && S.screen!=='setup' && this.on(); },
+  /* يُستدعى عند تغيّر وثيقة بابا، وعند انتهاء مدة القفل، وعند رجوع الصفحة للواجهة */
+  sync(){
+    clearTimeout(this.timer); this.timer=null;
+    const l=this.get();
+    if (l && l.until) this.timer=setTimeout(()=>this.sync(), Math.min(Math.max(l.until-Date.now(),0)+400, 2147000000));
+    if (PARENT_ONLY || S.screen==='parent' || S.screen==='setup') return;
+    if (l){
+      if (document.querySelector('.game')){ if (this.warned!==l.ts){ this.warned=l.ts; toast('🔒 أَكْمِلِي هَذِهِ الْمَحَطَّةَ، ثُمَّ نَتَوَقَّفُ.', 5000); } }
+      else if (!this.shown) render();
+    } else if (this.shown) render();
+  }
+};
 
 /* تطبيق تقييمات بابا القادمة من اللوحة على تقدم الطفلة (الكاتب الوحيد للتقدم هو جهاز الطفلة) */
 /* وقت الإنجاز = وقت إرسالها (at) لا وقت التقييم، حتى لا تنطفئ لمبة اليوم بعمل أمس */
@@ -2785,6 +2816,8 @@ const TOTAL_MAX = () => CONTENT.units.reduce((a,u)=>a+unitMax(u),0) + introMax()
 /* ===================== الشاشة الرئيسية ===================== */
 function render(){
   if (PARENT_ONLY && S.screen!=='setup' && S.screen!=='parent') return renderParentLock();
+  if (Lock.blocks()) return renderLocked();
+  Lock.shown=false;
   if (S.screen==='home') renderHome();
   else if (S.screen==='unit') renderUnit(S.nav[0], S.nav[1]);
   else if (S.screen==='lesson') renderLesson(S.nav[0], S.nav[1]);
@@ -2793,6 +2826,18 @@ function render(){
   else if (S.screen==='parent') renderParent(S.nav[0]);
   else if (S.screen==='setup') renderSetup();
   else renderHome();
+}
+/* شاشة «اللعبة مقفلة»: بلا صوت؛ S.screen يبقى كما هو فترجع لمكانها عند الفتح. بابا يقدر يفتحها من هنا برمزه. */
+function renderLocked(){
+  const l=Lock.get()||{};
+  if (!Lock.shown){ Lock.shown=true; try{ Say.stop(); closeSheet(); }catch(e){} }
+  const unlock=()=>askPin('رَمْزُ بَابَا السِّرِّيّ 🔐', ()=>{ Parent.ensure(); S.parent.lock=null; Parent.save(); toast('🔓 فُتِحَتِ اللُّعْبَةُ'); Lock.sync(); }, {onCancel:()=>{}});
+  mount(h('div',{class:'screen', id:'locked'},
+    topbar(),
+    h('div',{class:'card lockcard'}, h('div',{class:'lock-ic','aria-hidden':'true'},'🔒'), h('h2',{},'اللُّعْبَةُ مُقْفَلَةٌ الْآنَ'),
+      h('p',{class:'lock-msg'}, l.msg || 'سَنَلْعَبُ فِي وَقْتٍ آخَرَ إِنْ شَاءَ اللَّهُ 🌙'),
+      l.until? h('p',{class:'lock-until'}, 'تُفْتَحُ اللُّعْبَةُ السَّاعَةَ ', clockParts(new Date(l.until)).t) : null),
+    h('button',{class:'btn btn-sm btn-ghost', id:'lock-pin', style:'align-self:center', onclick:unlock}, '🔐 بابا')));
 }
 function go(screen, ...nav){ S.screen=screen; S.nav=nav; Say.stop(); render(); if(screen==='home') applyParentRatings(); }
 
@@ -2832,6 +2877,7 @@ function parentBubble(){
 }
 /* تشغيل محطة/كتلة من مسارها (يُستخدم في خطة الأسبوع والمهام) */
 function runByPath(path){
+  if (Lock.blocks()) return render();
   if (kDefOf(path)) return kRun(path);
   const [a,b]=path.split('/');
   const f=findLesson(a);
@@ -2984,6 +3030,7 @@ function renderLesson(key, tab){
 
 /* ===================== تشغيل محطة ===================== */
 async function runStation(u, l, key){
+  if (Lock.blocks()) return render();
   if (String(key).startsWith('k-')) return kRunStation(u, l, key);
   const xt = kLesson(l.key) ? 'x' : undefined;   /* في الدروس المحوَّلة: ألعاب اللعبة تحت تبويب «تمرين» */
   const def=STATION_DEFS.find(d=>d.key===key); const path=`${l.key}/${key}`; const skill=stationSkill(def,l);
@@ -3007,8 +3054,8 @@ async function runStation(u, l, key){
   }catch(e){ console.error(e); toast('حَدَثَ خَطَأٌ، ارْجِعِي وَجَرِّبِي مَرَّةً ثَانِيَةً'); }
   if (!r || r.aborted){ if(!(r&&r.quiet)) Log.ev({k:'station_abort', s:path}); return go('lesson', l.key, xt); }
   const idx=STATION_DEFS.findIndex(d=>d.key===key); const nxt=STATION_DEFS[idx+1];
-  const act = await finishStation(g, Object.assign({path, skill, next: nxt? `التَّالِي: ${nxt.title} ${nxt.icon}` : null}, r));
-  if (act==='next' && nxt) return runStation(u,l,nxt.key);
+  const act = await finishStation(g, Object.assign({path, skill, next: (nxt && !Lock.on())? `التَّالِي: ${nxt.title} ${nxt.icon}` : null}, r));
+  if (act==='next' && nxt && !Lock.on()) return runStation(u,l,nxt.key);
   go('lesson', l.key, xt);
 }
 
@@ -4072,6 +4119,7 @@ async function kRunSteps(g, def, ctx){
 }
 /* يشغّل أي مسار من «كتابي»: درس (u1l1/k-read)، جزء وحدة (u1/k-listen)، المراجعة (intro/k-n1)، أنا أقرأ (lib/k-a1) */
 async function kRun(path){
+  if (Lock.blocks()) return render();
   const [a]=String(path).split('/'); const def=kDefOf(path);
   let back=()=>go('home'), list=null, title='', ctx={path, lesson:'', unit:'', L:null, vref:null, skill:null};
   if (a==='intro'){ back=()=>go('intro'); list=kIntroDefs(); ctx.lesson='intro'; }
@@ -4087,8 +4135,8 @@ async function kRun(path){
   let r; try{ r=await kRunSteps(g, def, ctx); }catch(e){ console.error(e); toast('حَدَثَ خَطَأٌ، ارْجِعِي وَجَرِّبِي مَرَّةً ثَانِيَةً'); }
   if (!r || r.aborted){ if(!(r && r.quiet)) Log.ev({k:'station_abort', s:path}); return back(); }
   const idx= list? list.indexOf(def) : -1; const nxt= (list && idx>=0)? list[idx+1] : null;
-  const act=await finishStation(g, Object.assign({path, skill:ctx.skill, next: nxt? `التَّالِي: ${nxt.title} ${nxt.icon}` : null}, r));
-  if (act==='next' && nxt) return kRun(`${a}/${nxt.key}`);
+  const act=await finishStation(g, Object.assign({path, skill:ctx.skill, next: (nxt && !Lock.on())? `التَّالِي: ${nxt.title} ${nxt.icon}` : null}, r));
+  if (act==='next' && nxt && !Lock.on()) return kRun(`${a}/${nxt.key}`);
   back();
 }
 function kRunStation(u, l, key){ return kRun(`${l.key}/${key}`); }
@@ -4325,6 +4373,30 @@ function renderParent(tab='hub'){
     body.replaceChildren(...kids(({hub:tabHub, today:tabToday, plan:tabPlan, progress:tabProgress, mistakes:tabMistakes, approvals:tabApprovals, messages:tabMessages, settings:tabSettings, review:tabReview}[tab]||tabHub)()));
   })();
 }
+/* ---------- قفل اللعبة على البنت ---------- */
+let _lockTimer=null;
+function lockUntilText(ts){ return (dayKey(ts)!==dayKey()? 'بكرة ' : '')+'الساعة '+clockParts(new Date(ts)).t; }
+function lockCard(){
+  Parent.ensure(); const l=Lock.get(); const name=childName();
+  clearTimeout(_lockTimer); if (l && l.until) _lockTimer=setTimeout(()=>{ if (S.screen==='parent' && S.nav[0]==='hub') renderParent('hub'); }, Math.min(l.until-Date.now()+600, 2147000000));
+  const doLock=(dur, msg)=>{ Parent.ensure(); const now=Date.now(); let until=0;
+    if (dur==='morning'){ const d=new Date(now); if (d.getHours()>=6) d.setDate(d.getDate()+1); d.setHours(6,0,0,0); until=d.getTime(); } else if (dur) until=now+dur*60000;
+    S.parent.lock={ts:now, until, msg:String(msg||'').trim().slice(0,120)}; Parent.save(); closeSheet(); toast('🔒 قُفلت اللعبة على '+name); renderParent('hub'); };
+  const unlockNow=()=>{ Parent.ensure(); S.parent.lock=null; Parent.save(); toast('🔓 فُتحت اللعبة لـ'+name); renderParent('hub'); };
+  const ask=()=>{ let sel=0;
+    const chips=[[0,'حتى أفتحها أنا'],[30,'نصف ساعة'],[60,'ساعة'],[120,'ساعتان'],['morning','حتى الصباح (٦ ص)']].map(([v,t])=>{ const b=h('button',{class:'tab'+(v===0?' on':''), type:'button', 'data-dur':String(v), onclick:()=>{ sel=v; chips.forEach(c=>c.classList.toggle('on', c===b)); }}, t); return b; });
+    const msg=h('input',{id:'lock-msg', placeholder:'مثال: وقت النوم 🌙', maxlength:'120', autocomplete:'off'});
+    openSheet(h('div',{class:'stack'}, h('h3',{},'🔒 قفل اللعبة على ', name),
+      h('p',{class:'small'},'تظهر عندها شاشة «اللعبة مقفلة» خلال ثوانٍ إذا جهازها متصل. إذا كانت داخل محطة تكمّلها أولًا حتى لا يضيع شغلها، ثم تُقفل.'),
+      h('div',{class:'field'}, h('label',{},'مدة القفل'), h('div',{class:'row', style:'gap:6px'}, ...chips)),
+      h('div',{class:'field'}, h('label',{for:'lock-msg'},'رسالة تظهر لها (اختياري)'), msg),
+      h('div',{class:'row'}, h('button',{class:'btn btn-primary', id:'lock-go', onclick:()=>doLock(sel, msg.value)},'🔒 اقفل الآن'), h('button',{class:'btn btn-sm', onclick:closeSheet},'إلغاء')))); };
+  return l
+    ? h('div',{class:'card lockrow on', id:'lockrow'}, h('div',{class:'need-b'}, h('b',{},'🔒 اللعبة مقفلة على ', name), h('span',{class:'tiny'}, (l.until? 'تُفتح تلقائيًا '+lockUntilText(l.until) : 'حتى تفتحها أنت')+(l.msg? ' · رسالتك: '+l.msg : ''))),
+        h('button',{class:'btn btn-sm btn-green', id:'lock-off', onclick:unlockNow},'🔓 افتح اللعبة'))
+    : h('div',{class:'card lockrow', id:'lockrow'}, h('div',{class:'need-b'}, h('b',{},'🔓 اللعبة مفتوحة لـ', name), h('span',{class:'tiny'},'تقدر تقفلها عليها من هنا في أي وقت')),
+        h('button',{class:'btn btn-sm', id:'lock-on', style:'border-color:var(--bad);color:var(--bad)', onclick:ask},'🔒 اقفل اللعبة'));
+}
 /* الصفحة الرئيسية للوحة */
 function tabHub(){
   const p=Progress.ensure(); const goal=(S.settings||DEFAULT_SETTINGS).dailyGoalMin||15;
@@ -4338,6 +4410,7 @@ function tabHub(){
   if (!needs.length) needs.push(h('div',{class:'need ok'}, h('span',{class:'need-ic'},'✅'), h('div',{class:'need-b'}, h('b',{},'ما فيه شيء ينتظرك الآن'), h('span',{class:'tiny'},'كل الاعتمادات تمت، ولا توجد رسائل جديدة.'))));
   const tiles=PSECTIONS.map(sec=>{ const n=sec.badge? sec.badge():0; return h('button',{class:'ptile', onclick:()=>renderParent(sec.key)}, n? h('span',{class:'pt-badge'}, n):null, h('span',{class:'pt-ic'}, sec.icon), h('span',{class:'pt-t'}, sec.title), h('span',{class:'pt-d'}, sec.desc)); });
   return [
+    lockCard(),
     h('div',{class:'card'}, h('h3',{},'🔔 يحتاجك الآن'), ...needs),
     h('div',{class:'kpis'},
       h('div',{class:'kpi'}, h('div',{class:'v'}, mins), h('div',{class:'l'}, `دقيقة لعبت اليوم · الهدف ${goal}`)),
@@ -4573,7 +4646,7 @@ function tabSettings(){
         h('p',{class:'tiny'},'حالة هذا الجهاز: ', S.mode==='db'?'🟢 متصل ومتزامن':'🟡 غير متصل (تحقق من الإنترنت)'))
       : h('div',{class:'stack'}, h('p',{class:'small'},'هذا الجهاز يلعب محليًا بدون ربط.'), h('button',{class:'btn btn-sm', onclick:()=>{ Family.clear(); location.reload(); }},'ربط هذا الجهاز بعائلة'))) :
     h('div',{class:'card stack'}, h('h3',{},'كيف يعمل الربط؟'), h('p',{class:'small'},'افتح رابط اللعبة على جهاز البنت وأنت مسجّل دخولك بحسابك نفسه (مرة واحدة)، وافتح رابط لوحة بابا على جوالك. كل ما تسويه البنت يوصلك هنا خلال ثوانٍ.'), h('p',{class:'small'}, 'حالة هذا الجهاز: ', S.mode==='db'?'🟢 متصل بقاعدة البيانات':'🟡 محلي فقط (غير مسجّل دخول)')),
-    h('div',{class:'card stack'}, h('h3',{style:'color:var(--bad)'},'منطقة الخطر'), h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:()=>openSheet(h('div',{class:'stack'}, h('h3',{},'تأكيد إعادة التعيين'), h('p',{class:'small'},'سيُمسح التقدم والنجوم وصندوق الأخطاء والاعتمادات والرسائل. الجلسات السابقة تبقى في الأرشيف. الإعدادات والرمز يبقيان.'), h('div',{class:'row'}, h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:async()=>{ S.progress=Progress.blank(); S.mistakes={items:{}}; S.child={pending:[],notes:[],handwriting:[],seenMsgs:{}}; S.parent={messages:[],mission:null,ratings:{},taskConfirms:{},weekPlan:(S.parent||{}).weekPlan||null}; await Promise.all([Store.set('progress',S.progress),Store.set('mistakes',S.mistakes),Store.set('child',S.child),Store.set('parent',S.parent)]); closeSheet(); toast('تمت إعادة التعيين'); renderParent('settings'); }},'نعم، امسح'), h('button',{class:'btn btn-sm', onclick:closeSheet},'إلغاء'))))},'🗑️ إعادة تعيين التقدم'))
+    h('div',{class:'card stack'}, h('h3',{style:'color:var(--bad)'},'منطقة الخطر'), h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:()=>openSheet(h('div',{class:'stack'}, h('h3',{},'تأكيد إعادة التعيين'), h('p',{class:'small'},'سيُمسح التقدم والنجوم وصندوق الأخطاء والاعتمادات والرسائل. الجلسات السابقة تبقى في الأرشيف. الإعدادات والرمز يبقيان.'), h('div',{class:'row'}, h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:async()=>{ S.progress=Progress.blank(); S.mistakes={items:{}}; S.child={pending:[],notes:[],handwriting:[],seenMsgs:{}}; S.parent={messages:[],mission:null,ratings:{},taskConfirms:{},weekPlan:(S.parent||{}).weekPlan||null,lock:(S.parent||{}).lock||null}; await Promise.all([Store.set('progress',S.progress),Store.set('mistakes',S.mistakes),Store.set('child',S.child),Store.set('parent',S.parent)]); closeSheet(); toast('تمت إعادة التعيين'); renderParent('settings'); }},'نعم، امسح'), h('button',{class:'btn btn-sm', onclick:closeSheet},'إلغاء'))))},'🗑️ إعادة تعيين التقدم'))
   ];
 }
 
@@ -4776,8 +4849,11 @@ async function boot(){
     });
     for (const k of pushLocal) await Store.set(k, S[k]);
     Progress.ensure(); Mistakes.ensure(); Child.ensure(); Parent.ensure();
-    Store.subscribe('parent', d=>{ if(d){ S.parent=d; if(S.screen!=='parent') applyParentRatings(); if(S.screen==='home') render(); } });
-    Store.subscribe('settings', d=>{ if(d){ const had=BookPages.code(); S.settings=d; if(BookPages.code()!==had) BookPages.mem={}; if(S.screen==='home') render(); } });
+    /* لا يُعاد رسم الرئيسية إذا كانت محطة شغّالة (المحطات التي تُفتح من الرئيسية تبقي S.screen='home')، وإلا انهدمت المحطة تحت يدها */
+    const idle=()=>!document.querySelector('.game');
+    Store.subscribe('parent', d=>{ if(d){ S.parent=d; if(S.screen!=='parent') applyParentRatings(); if(S.screen==='home' && idle()) render(); Lock.sync();
+      if (S.screen==='parent' && S.nav[0]==='hub' && idle()) renderParent('hub'); } });   /* حالة القفل في لوحة بابا إذا فُتحت اللعبة برمزه من جهازها */
+    Store.subscribe('settings', d=>{ if(d){ const had=BookPages.code(); S.settings=d; if(BookPages.code()!==had) BookPages.mem={}; if(S.screen==='home' && idle()) render(); } });
     if (!S.settings || !S.settings.pinHash) S.screen='setup'; else if (S.screen==='setup') S.screen='home';
     if (!document.querySelector('.game')) render();
   }
@@ -4791,6 +4867,7 @@ async function boot(){
     return;
   }
   try{ Log.ev({k:'open'}); }catch(e){}
+  Lock.sync(); document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) Lock.sync(); });   /* مؤقت الفتح التلقائي + القفل الذي وصل والجهاز نائم */
   await applyParentRatings();
   /* نسخة التجربة: ‎?go=u3 يفتح الوحدة مباشرة */
   if (window.PREVIEW){ try{ const u=new URL(location.href); const gk=u.searchParams.get('go'); if(gk){ u.searchParams.delete('go'); history.replaceState(null,'',u.pathname+u.search+u.hash); if(/^u\d$/.test(gk) && S.screen==='home' && !document.querySelector('.game')) go('unit', gk); } }catch(e){} }
