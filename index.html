@@ -365,6 +365,48 @@ audio{width:100%;max-width:520px;height:44px}
 .act.ok{background:#EEF9F1}.act.bad{background:#FDEDEE}.act.warn{background:#FFF4E0}.act.start{background:#EAF3FF}.act.done{background:#F1EAFE}
 .act .muted{color:#777;font-size:.88rem}
 
+/* ===================== الكتابة بالقلم ===================== */
+.ink{display:flex;flex-direction:column;gap:8px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.ink-tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;position:sticky;top:0;z-index:5;background:var(--surface,#fff);border:2px solid var(--line,#d8e6f3);border-radius:16px;padding:6px 8px}
+.ink-b{min-width:46px;height:46px;border-radius:12px;border:2px solid var(--line,#d8e6f3);background:#fff;font-size:1.25rem;font-family:inherit;cursor:pointer;padding:0 8px}
+.ink-b.wide{font-size:.85rem;font-weight:700}
+.ink-b.on{border-color:#FF8A1F;background:#FFF1E0}
+.ink-b:disabled{opacity:.4}
+.ink-dot{width:30px;height:30px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px var(--line,#d8e6f3);cursor:pointer;padding:0}
+.ink-dot.on{box-shadow:0 0 0 3px #FF8A1F}
+.ink-status{font-size:.8rem;color:#2E7D32;font-weight:700;margin-inline-start:auto}
+.ink-view{position:relative;border-radius:16px;border:2px solid #cfe0ef;background:#fff;overflow:hidden}
+.ink-view.zoomed{overflow:auto;max-height:72vh;-webkit-overflow-scrolling:touch}
+.ink-size{position:relative}
+.ink-inner{position:absolute;top:0;left:0;transform-origin:0 0;background:#fff}
+.ink-content{position:absolute;inset:0;padding:16px 20px 28px;box-sizing:border-box;color:#1b2a41;font-family:'Noto Sans Arabic',system-ui,sans-serif;pointer-events:none}
+.ink-cv{position:absolute;top:0;left:0;width:100%;height:100%;touch-action:none}
+.ink.ro .ink-cv{touch-action:pan-y}
+.ib{box-sizing:border-box;overflow:hidden;white-space:nowrap}
+.ib-title{font-weight:800;display:flex;align-items:center;justify-content:center;color:#12355b}
+.ib-note{white-space:normal;font-size:24px;line-height:40px;font-weight:700;color:#8a4b00;background:#FFF6E5;border-radius:12px;padding:8px 14px}
+.ib-model{display:flex;align-items:center;justify-content:center;font-family:'Noto Naskh Arabic','Noto Sans Arabic',serif;font-weight:700;color:#12355b;background:#EEF6FF;border-radius:12px}
+.il-row{position:relative;height:120px}
+.il-row .il-base{position:absolute;left:0;right:0;top:88px;border-top:3px solid #7fb2e5}
+.il-row .il-mid{position:absolute;left:0;right:0;top:44px;border-top:2px dashed #d5e6f7}
+.il-dict .il-base,.il-dict .il-mid{right:118px}
+.il-say{position:absolute;right:0;top:30px;width:64px;height:64px;border-radius:50%;background:#FFE7C7;border:3px solid #FFB866;display:flex;align-items:center;justify-content:center;font-size:30px;pointer-events:auto}
+.il-say.speaking{background:#FFD08A}
+.il-num{position:absolute;right:76px;top:44px;font-size:28px;color:#5b7a99}
+.il-key{position:absolute;left:4px;top:2px;color:#2E7D32;font-weight:700}
+.im-row{height:96px;display:flex;align-items:center;gap:10px}
+.im-box{height:70px;display:flex;align-items:center;justify-content:center;border:3px solid #cfe0ef;border-radius:14px;font-weight:700;overflow:hidden;padding:0 8px;box-sizing:border-box}
+.im-box.r{width:240px;background:#EEF6FF}.im-box.l{width:370px;background:#F3FBF1}
+.im-gap{flex:1}
+.im-dot{width:16px;height:16px;border-radius:50%;background:#5b7a99;flex:none}
+.ib-circle{display:flex;flex-wrap:wrap;white-space:normal}
+.ic-w{width:25%;height:96px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.it-q{height:60px;display:flex;align-items:center;font-weight:800}
+.it-o{height:78px;display:flex;align-items:center;gap:16px}
+.it-box{width:46px;height:46px;border:3px solid #5b7a99;border-radius:10px;flex:none;background:#fff}
+.work-card .ink{margin-top:6px}
+.pill.ind{background:#E4F5E1;color:#1b5e20}.pill.help{background:#FFF1D6;color:#8a4b00}.pill.shown{background:#FDE3E3;color:#b71c1c}
+
 </style>
 </head>
 <body>
@@ -547,7 +589,7 @@ const UNIT1 = {
   },
   tasks:[
     {key:'t1', text:'اتَّصِلِي بِأَحَدِ أَقَارِبِكِ وَسَلِّمِي عَلَيْهِ.', emoji:'📞'},
-    {key:'t2', text:'اكْتُبِي أَسْمَاءَ خَمْسَةٍ مِنْ أَقَارِبِكِ فِي دَفْتَرِكِ.', emoji:'📝'},
+    {key:'t2', text:'اكْتُبِي أَسْمَاءَ خَمْسَةٍ مِنْ أَقَارِبِكِ.', emoji:'📝'},
   ],
   lessons:[
     /* ---------- الدرس الأول ---------- */
@@ -575,7 +617,7 @@ const UNIT1 = {
         {w:'الْأَقَارِب',  m:'أَهْلِي مِثْلُ عَمِّي وَخَالِي',  ant:'الْغُرَبَاء',    type:'اسم'},
         {w:'فَرِحَتْ',     m:'سُرَّتْ',                         ant:'حَزِنَتْ',      type:'فعل'},
         {w:'تُفْرِحُ',     m:'تُسْعِدُ',                        ant:'تُحْزِنُ',      type:'فعل'},
-        {w:'مُسَاعَدَة',   m:'عَوْنٌ',                          ant:'إِهْمَالٌ',     type:'اسم'},
+        {w:'مُسَاعَدَة',   m:'عَوْنٌ',                          ant:null,     type:'اسم'},
         {w:'الْمَحَبَّة',  m:'الْحُبُّ',                        ant:'الْكَرَاهِيَة',  type:'اسم'},
       ],
       phon:{
@@ -796,10 +838,10 @@ const UNIT2 = {
       vocab:[
         {w:'دَعَتْ',       m:'طَلَبَتْ حُضُورَهَا',             ant:null,            type:'فعل'},
         {w:'سَقَطَتْ',     m:'وَقَعَتْ',                        ant:'ارْتَفَعَتْ',    type:'فعل'},
-        {w:'دُونَ قَصْدٍ', m:'بِدُونِ نِيَّةٍ',                  ant:'عَمْدًا',        type:'اسم'},
+        {w:'قَصْد', m:'نِيَّةٌ وَتَعَمُّدٌ',                  ant:null,        type:'اسم'},
         {w:'نَدِمَتْ',     m:'حَزِنَتْ عَلَى مَا فَعَلَتْ',       ant:null,            type:'فعل'},
         {w:'أَغْلَى',      m:'أَثْمَنُ',                        ant:'أَرْخَصُ',       type:'اسم'},
-        {w:'أَصْلَحَتَا',  m:'رَمَّمَتَا',                      ant:'كَسَرَتَا',      type:'فعل'},
+        {w:'أَصْلَحَتَا',  m:'جَعَلَتَاهَا سَلِيمَةً',                      ant:'كَسَرَتَا',      type:'فعل'},
       ],
       phon:{
         skill:'shadda', rule:'الشَّدَّةُ (التَّضْعِيفُ)',
@@ -874,7 +916,7 @@ const UNIT2 = {
       quiz:[
         {t:'mcq', q:'مَاذَا رَأَتْ {N} مِنَ النَّافِذَةِ؟', opts:['دُخَانًا كَثِيفًا','قِطَّةً صَغِيرَةً','مَطَرًا غَزِيرًا'], a:0, ev:0, kind:'what'},
         {t:'mcq', q:'بِمَنِ اتَّصَلَتْ {N}؟', opts:['بِالدِّفَاعِ الْمَدَنِيِّ','بِالطَّبِيبِ','بِالْمُعَلِّمَةِ'], a:0, ev:2, kind:'who'},
-        {t:'mcq', q:'مَا رَقْمُ الدِّفَاعِ الْمَدَنِيِّ؟', opts:['٩٩٨','٩١١','٩٩٧'], a:0, ev:2, kind:'what'},
+        {t:'mcq', q:'مَا رَقْمُ الدِّفَاعِ الْمَدَنِيِّ؟', opts:['٩٩٨','٩٩٣','٩٩٧'], a:0, ev:2, kind:'what'},
         {t:'mcq', q:'مَنْ أَطْفَأَ الْحَرِيقَ؟', opts:['رِجَالُ الْإِطْفَاءِ','أَبُو سَعْدٍ','الْأُمُّ'], a:0, ev:4, kind:'who'},
         {t:'mcq', q:'بِمَ وَصَفَ أَبُو سَعْدٍ {N}؟', opts:['جَارَةٌ صَغِيرَةٌ وَشُجَاعَةٌ','بِنْتٌ خَائِفَةٌ','جَارَةٌ كَسُولَةٌ'], a:0, ev:5, kind:'what'},
         {t:'order', q:'رَتِّبِي أَحْدَاثَ الْقِصَّةِ: مَاذَا حَدَثَ أَوَّلًا، ثُمَّ بَعْدَهُ؟', words:['رَأَتِ الدُّخَانَ','اتَّصَلَتْ بِالدِّفَاعِ الْمَدَنِيِّ','أَطْفَأَ الرِّجَالُ الْحَرِيقَ'], answer:'رَأَتِ الدُّخَانَ اتَّصَلَتْ بِالدِّفَاعِ الْمَدَنِيِّ أَطْفَأَ الرِّجَالُ الْحَرِيقَ', kind:'order'},
@@ -883,7 +925,7 @@ const UNIT2 = {
         {w:'كَثِيف',     m:'غَلِيظٌ كَثِيرٌ',             ant:'خَفِيف',      type:'اسم'},
         {w:'أَسْرَعَتْ', m:'جَرَتْ بِسُرْعَةٍ',           ant:'تَبَاطَأَتْ', type:'فعل'},
         {w:'حَرِيق',     m:'نَارٌ مُشْتَعِلَةٌ',           ant:null,          type:'اسم'},
-        {w:'بِهُدُوءٍ',  m:'بِسَكِينَةٍ',                 ant:'بِصُرَاخٍ',   type:'اسم'},
+        {w:'هُدُوء',  m:'سَكِينَةٌ',                 ant:'ضَجِيج',   type:'اسم'},
         {w:'شُجَاعَة',   m:'قَوِيَّةُ الْقَلْبِ',           ant:'جَبَانَة',    type:'اسم'},
         {w:'أَمَانَة',   m:'شَيْءٌ يَجِبُ حِفْظُهُ',        ant:'خِيَانَة',    type:'اسم'},
       ],
@@ -987,7 +1029,7 @@ const UNIT3 = {
     lines:[
       ['وَطَنِي يَا أَرْضَ الْأَجْدَادْ','فِيكَ الْخَيْرُ وَفِيكَ الزَّادْ'],
       ['عَلَمُكَ أَخْضَرُ يَعْلُو','وَكَلِمَةُ التَّوْحِيدِ تَحْلُو'],
-      ['أَحْفَظُكَ يَا وَطَنِي الْغَالِي','وَأَرْفَعُ اسْمَكَ عَالِي'],
+      ['أَحْفَظُكَ يَا وَطَنِي الْغَالِي','وَاسْمُكَ فِي قَلْبِي عَالِي'],
     ],
     blanks:[
       {line:0, half:0, word:'الْأَجْدَادْ', opts:['الْأَجْدَادْ','الْأَوْلَادْ','الْبِلَادْ']},
@@ -1455,7 +1497,7 @@ const EXTRA = {
     u3:{ emoji:'👨‍👩‍👧', text:'الْعَبِي مَعَ بَابَا: اذْكُرِي أَسْمَاءَ مُدُنٍ سُعُودِيَّةٍ تَبْدَأُ بِـ (ال)، وَقُولِي: شَمْسِيَّة أَمْ قَمَرِيَّة؟' },
   },
   hw: {
-    u1l1:'اكْتُبِي فِي دَفْتَرِكِ أَسْمَاءَ خَمْسَةٍ مِنْ أَقَارِبِكِ، وَأَمَامَ كُلِّ اسْمٍ رَقْمَ هَاتِفِهِ.',
+    u1l1:'اكْتُبِي أَسْمَاءَ خَمْسَةٍ مِنْ أَقَارِبِكِ، وَأَمَامَ كُلِّ اسْمٍ صِلَةَ قَرَابَتِهِ (مِثْلَ: عَمِّي، خَالَتِي).',
     u1l2:'اكْتُبِي خَمْسَ صِفَاتٍ جَمِيلَةٍ تَجْعَلُ أُسْرَتَكِ وَأَقَارِبَكِ يُحِبُّونَكِ.',
     u2l1:'اكْتُبِي جُمْلَةً عَنْ فَائِدَةِ مُسَاعَدَةِ الْآخَرِينَ فِي الْمَدْرَسَةِ.',
     u2l2:'اكْتُبِي ثَلَاثَةَ أَرْقَامٍ مُهِمَّةٍ (مِثْلَ الدِّفَاعِ الْمَدَنِيِّ ٩٩٨)، وَأَعْطِي نُسْخَةً لِصَدِيقَاتِكِ.',
@@ -1842,9 +1884,10 @@ const Progress = {
     return this.save();
   },
   skillLevel(sk){ this.ensure(); return (S.progress.skills[sk]&&S.progress.skills[sk].level)||2; },
-  recordSkill(sk, ok, total){
+  /* ok = إجابات مستقلة فقط؛ help = بمساعدة؛ shown = كُشف الجواب (لا تُحسب إتقانًا) */
+  recordSkill(sk, ok, total, help=0, shown=0){
     if(!sk||!total) return; this.ensure(); const s=S.progress.skills[sk]||{ok:0,total:0,level:2,recent:[]};
-    s.ok+=ok; s.total+=total; s.recent=(s.recent||[]).concat([Math.round(100*ok/total)]).slice(-6);
+    s.ok+=ok; s.total+=total; s.help=(s.help||0)+help; s.shown=(s.shown||0)+shown; s.recent=(s.recent||[]).concat([Math.round(100*ok/total)]).slice(-6);
     const acc=ok/total; if(acc>=0.9 && s.level<3) s.level++; else if(acc<0.6 && s.level>1) s.level--;
     S.progress.skills[sk]=s;
   },
@@ -1896,7 +1939,7 @@ window.addEventListener('pagehide', ()=>Log.flush());
 
 /* ===================== بيانات الطفلة/الوالد ===================== */
 const Child = {
-  ensure(){ if(!S.child) S.child={pending:[], notes:[], handwriting:[], recordings:[], seenMsgs:{}}; for(const k of ['pending','notes','handwriting','recordings']) if(!S.child[k]) S.child[k]=[]; if(!S.child.seenMsgs) S.child.seenMsgs={}; return S.child; },
+  ensure(){ if(!S.child) S.child={pending:[], notes:[], handwriting:[], recordings:[], works:[], seenMsgs:{}}; for(const k of ['pending','notes','handwriting','recordings','works']) if(!S.child[k]) S.child[k]=[]; if(!S.child.seenMsgs) S.child.seenMsgs={}; return S.child; },
   addPending(p){ this.ensure(); S.child.pending.unshift(Object.assign({id:uid(), ts:Date.now(), status:'pending'}, p)); S.child.pending=S.child.pending.slice(0,60); return Store.set('child', S.child); },
   note(text, kind){ this.ensure(); S.child.notes.unshift({id:uid(), ts:Date.now(), text, kind:kind||'note'}); S.child.notes=S.child.notes.slice(0,40); return Store.set('child', S.child); },
   save(){ this.ensure(); return Store.set('child', S.child); }
@@ -1915,13 +1958,29 @@ async function applyParentRatings(){
     if (r && p.status==='pending'){
       p.status='rated'; p.rating=r.rating; p.ratedAt=r.ts; changed=true;
       if (p.station){ Progress.setStars(p.station, r.rating, {acc:r.rating/3, ms:p.ms||0}); prog=true; Log.ev({k:'rated_by_parent', s:p.station, rating:r.rating}); }
+      /* المهارات التي تُقاس بالكتابة المستقلة أو القراءة المسجّلة: تقييم بابا هو القياس */
+      const sk = p.skill || (p.type==='read' ? 'read' : p.type==='nasheed' ? 'nasheed' : '');
+      if (sk){ Progress.recordSkill(sk, r.rating===3?1:0, 1, r.rating===2?1:0, r.rating<=1?1:0); prog=true; }
     }
     const tc = p.task && S.parent.taskConfirms[p.id];
     if (tc && p.status==='pending'){ p.status='rated'; p.rating=3; changed=true; if(p.station){ Progress.setStars(p.station,3,{acc:1,ms:0}); prog=true; } }
   }
+  if (applyParentDeletes()) changed=true;
   if (changed) await Child.save();
   if (prog) await Progress.save();
-  if (changed) render();
+  if (changed && !document.querySelector('.game')) render();
+}
+/* طلبات الحذف القادمة من لوحة بابا + مدة الاحتفاظ: تُزال من فهارس جهاز الطفلة، والملفات نفسها تُحذف من القاعدة */
+function applyParentDeletes(){
+  if(!S.child) return false; Child.ensure(); Parent.ensure(); const del=S.parent.deletes||{}; let ch=false;
+  const days=(S.settings&&S.settings.retentionDays)||0; const cutoff= days>0 ? Date.now()-days*86400000 : 0; const allBefore=del.__all||0;
+  const gone=(id,ts)=> !!del[id] || (cutoff && ts<cutoff) || (allBefore && ts<=allBefore);
+  const sweep=(arr, rm)=>{ const keep=[]; for(const x of arr){ if(gone(x.id, x.ts||0)){ ch=true; try{ rm(x); }catch(e){} } else keep.push(x); } return keep; };
+  S.child.recordings=sweep(S.child.recordings, x=>Blobs.delete(x.id));
+  S.child.handwriting=sweep(S.child.handwriting, x=>Blobs.delete(x.id));
+  S.child.works=sweep(S.child.works, x=>Works.remove(x.id));
+  for(const p of S.child.pending){ if(p.audio && (del[p.audio] || (cutoff && p.ts<cutoff) || (allBefore && p.ts<=allBefore))){ p.audio=null; ch=true; } if(p.ink && (del[p.ink] || (allBefore && p.ts<=allBefore))){ p.inkGone=true; if(p.status==='pending'){ p.status='removed'; } ch=true; del[p.ink]&&0; } }
+  return ch;
 }
 
 /* ===================== النجوم والدقة ===================== */
@@ -2179,22 +2238,25 @@ async function runItems(items, ctx){
     const r = await runItem(item, {g, level, hint:ctx.hint, autoSay:ctx.autoSay, footExtra:ctx.footExtra});
     if (r.aborted) return {aborted:true};
     results.push(r);
-    Log.ev({k:'answer', s:ctx.path, skill, it:stripT(N(item.q||item.w||item.answer||'')).slice(0,50), ans:stripT(N(String(r.ans||''))).slice(0,40), ok:r.ok, tries:r.tries, hint:r.hint, ms:r.ms});
+    /* نوع الإجابة: مستقلة (من أول محاولة بلا مساعدة) / بمساعدة (بعد خطأ أو تلميح أو في تدريب فيه الحروف أو الكلمات جاهزة) / كُشف الجواب */
+    r.mode = item.t==='oral' ? 'rec' : (r.tries>=2 && !r.ok) ? 'shown' : (!r.ok || r.hint>0 || ctx.practice || item.mode==='copy' || item.mode==='flash') ? 'help' : 'ind';
+    if (r.mode!=='ind' && r.mode!=='rec' && r.hint>0) r.ok=false;
+    Log.ev({k:'answer', s:ctx.path, skill, it:stripT(N(item.q||item.w||item.answer||'')).slice(0,50), ans:stripT(N(String(r.ans||''))).slice(0,40), ok:r.ok, mode:r.mode, tries:r.tries, hint:r.hint, ms:r.ms});
     if (!r.ok && !ctx.review && item.t!=='sortone') Mistakes.add(item, skill, ctx.path);
     if (ctx.review){ if(r.ok) Mistakes.correct(item); else Mistakes.add(item, skill, ctx.path); }
     if (!r.ok && ctx.perSkill) { /* نتابع المهارات المختلفة داخل المحطة */ }
-    ctx.skillTally = ctx.skillTally||{}; const st=ctx.skillTally[skill]||{ok:0,total:0}; st.total++; if(r.ok) st.ok++; ctx.skillTally[skill]=st;
+    if (r.mode!=='rec'){ ctx.skillTally = ctx.skillTally||{}; const st=ctx.skillTally[skill]||{ok:0,total:0,help:0,shown:0}; st.total++; if(r.mode==='ind') st.ok++; else if(r.mode==='help') st.help++; else st.shown++; ctx.skillTally[skill]=st; }
   }
   g.setDots(items.length, items.length, results); g.cur=null;
   const ok=results.filter(r=>r.ok).length;
-  return {ok, total:results.length, acc: results.length? ok/results.length : 1, ms:Date.now()-t0, results, skillTally:ctx.skillTally};
+  return {ok, total:results.length, acc: results.length? ok/results.length : 1, ms:Date.now()-t0, results, skillTally:ctx.skillTally||{}};
 }
 
 /* ===================== إنهاء محطة وشاشة النتيجة ===================== */
 async function finishStation(g, info){
   // info: {path, skill, acc, ms, stars, pending, skillTally, label, next}
   const stars = info.stars!==undefined ? info.stars : starsFromAcc(info.acc);
-  if (info.skillTally) for (const [sk,v] of Object.entries(info.skillTally)) Progress.recordSkill(sk, v.ok, v.total);
+  if (info.skillTally) for (const [sk,v] of Object.entries(info.skillTally)) Progress.recordSkill(sk, v.ok, v.total, v.help||0, v.shown||0);
   else if (info.skill && info.total) Progress.recordSkill(info.skill, Math.round(info.acc*info.total), info.total);
   Progress.addMinutes(info.ms||0);
   if (!info.pending) await Progress.setStars(info.path, stars, {acc:info.acc, ms:info.ms});
@@ -2315,6 +2377,239 @@ function askPin(title, onOk, opts={}){
   draw();
 }
 
+/* ===================== الكتابة بالقلم (ورقة كتابة مستقلة) =====================
+   - الورقة لها عرض منطقي ثابت (INK_W) وارتفاع محسوب من مكوّناتها، فتظهر الكتابة في مكانها نفسه على أي جهاز.
+   - الكتابة تُحفظ كخطوط (نقاط) لا كصورة: تراجع، ممحاة، تكبير بدون تشويش، وعرض مطابق في لوحة بابا.
+   - القلم فقط: بعد أول لمسة بقلم الآيباد تصير الأصابع للتحريك والتكبير فقط (رفض راحة اليد). */
+const INK_W = 800, INK_LINE = 120, INK_PAD_T = 16, INK_PAD_B = 28;
+const INK_COLORS = ['#1F3A8A', '#111827', '#C62828', '#2E7D32'];
+
+/* ---------- حفظ الأعمال ---------- */
+const Works = {
+  key(id){ return 'ink_' + String(id).replace(/[^a-zA-Z0-9]+/g, '_'); },
+  async load(id){ try{ return await Store.get(this.key(id)); }catch(e){ return Store.lget(this.key(id)); } },
+  lru(k){ try{ let a = JSON.parse(localStorage.getItem('lg_inklru') || '[]').filter(x => x !== k); a.unshift(k); const max = S.mode === 'db' ? 25 : 60; a.splice(max).forEach(x => localStorage.removeItem('lg_' + x)); localStorage.setItem('lg_inklru', JSON.stringify(a)); }catch(e){} },
+  saveDoc(id, doc){ const k = this.key(id); const p = Store.set(k, doc); this.lru(k); return p; },
+  index(id, doc){
+    Child.ensure(); const W = S.child.works; const i = W.findIndex(w => w.id === id);
+    const meta = { id, path: doc.path || '', label: doc.label || '', page: doc.page || '', ts: doc.ts, n: Ink.count(doc.strokes), pen: !!doc.pen };
+    if (i >= 0) W.splice(i, 1); W.unshift(meta);
+    W.splice(150).forEach(d => this.remove(d.id));
+    return Child.save();
+  },
+  async remove(id){ const k = this.key(id); try{ localStorage.removeItem('lg_' + k); }catch(e){} try{ if (Store.db) await Store.db.doc(Store.path(k)).delete(); }catch(e){ console.warn('ink delete', e); } }
+};
+
+/* ---------- مكوّنات الورقة ---------- */
+function inkFit(text, maxW, base){ const n = stripT(N(String(text || ''))).length || 1; return Math.max(15, Math.min(base, Math.floor(maxW / (n * 0.56)))); }
+function inkNoteRows(text){ return Math.max(1, Math.ceil(stripT(N(String(text || ''))).length / 44)); }
+function inkBlockH(b){
+  switch (b.t){
+    case 'title': return 64;
+    case 'note': return 16 + 40 * inkNoteRows(b.x);
+    case 'model': return 96;
+    case 'lines': return INK_LINE * (b.n || 1);
+    case 'dict': return INK_LINE * b.w.length;
+    case 'match': return 96 * Math.max(b.r.length, b.l.length);
+    case 'circle': return 96 * Math.ceil(b.w.length / 4);
+    case 'tick': return 60 + 78 * b.o.length;
+    case 'gap': return b.h || 20;
+  }
+  return 0;
+}
+function inkSheetH(spec){ return INK_PAD_T + INK_PAD_B + spec.reduce((a, b) => a + inkBlockH(b), 0); }
+function inkLineRow(extra, cls){ return h('div', { class: 'il-row ' + (cls || '') }, h('i', { class: 'il-mid' }), h('i', { class: 'il-base' }), extra || null); }
+function inkBlockEl(b, opt){
+  const hgt = inkBlockH(b); const st = `height:${hgt}px`;
+  if (b.t === 'title') return h('div', { class: 'ib ib-title', style: st + `;font-size:${inkFit(b.x, 740, 34)}px` }, N(b.x));
+  if (b.t === 'note') return h('div', { class: 'ib ib-note', style: st }, N(b.x));
+  if (b.t === 'model') return h('div', { class: 'ib ib-model', style: st + `;font-size:${inkFit(b.x, 720, 46)}px` }, N(b.x));
+  if (b.t === 'gap') return h('div', { class: 'ib', style: st });
+  if (b.t === 'lines') return h('div', { class: 'ib ib-lines', style: st }, ...Array.from({ length: b.n || 1 }, () => inkLineRow()));
+  if (b.t === 'dict') return h('div', { class: 'ib ib-lines', style: st }, ...b.w.map((w, i) => {
+    const btn = h('span', { class: 'il-say', 'data-tap': '1' }, '🔊'); btn._tap = () => { Log.ev({ k: 'tts', txt: stripT(N(w)).slice(0, 40) }); Say.speakUI(btn, w); };
+    return inkLineRow(h('span', {}, btn, h('b', { class: 'il-num' }, toAr(i + 1)), opt.key ? h('span', { class: 'il-key', style: `font-size:${inkFit(w, 520, 24)}px` }, '✔ ', N(w)) : null), 'il-dict');
+  }));
+  if (b.t === 'match') return h('div', { class: 'ib ib-match', style: st }, ...b.r.map((r, i) => h('div', { class: 'im-row' },
+    h('span', { class: 'im-box r', style: `font-size:${inkFit(r, 220, 32)}px` }, N(r)), h('i', { class: 'im-dot' }), h('span', { class: 'im-gap' }), h('i', { class: 'im-dot' }),
+    h('span', { class: 'im-box l', style: `font-size:${inkFit(b.l[i] || '', 350, 28)}px` }, N(b.l[i] || '')))));
+  if (b.t === 'circle') return h('div', { class: 'ib ib-circle', style: st }, ...b.w.map(w => h('span', { class: 'ic-w', style: `font-size:${inkFit(w, 150, 34)}px` }, N(w))));
+  if (b.t === 'tick') return h('div', { class: 'ib ib-tick', style: st }, h('div', { class: 'it-q', style: `font-size:${inkFit(b.q, 740, 30)}px` }, N(b.q)), ...b.o.map(o => h('div', { class: 'it-o' }, h('i', { class: 'it-box' }), h('span', { style: `font-size:${inkFit(o, 640, 30)}px` }, N(o)))));
+  return h('div', {});
+}
+
+const Ink = {
+  penSeen: (() => { try{ return localStorage.getItem('lg_pen') === '1'; }catch(e){ return false; } })(),
+  count(strokes){ let n = 0; for (const s of strokes || []){ if (s.clr) n = 0; else if (!s.e) n++; } return n; },
+  /* يرسم كل الخطوط (بعد آخر «مسح الكل») على سياق مضبوط على الإحداثيات المنطقية */
+  paint(ctx, strokes, H){
+    ctx.clearRect(0, 0, INK_W, H); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    let from = 0; for (let i = 0; i < strokes.length; i++) if (strokes[i].clr) from = i + 1;
+    for (let i = from; i < strokes.length; i++) this.stroke(ctx, strokes[i]);
+    ctx.globalCompositeOperation = 'source-over';
+  },
+  stroke(ctx, s){
+    const p = s.p; if (!p || p.length < 2) return;
+    ctx.globalCompositeOperation = s.e ? 'destination-out' : 'source-over';
+    ctx.strokeStyle = s.e ? '#000' : (s.c || INK_COLORS[0]); ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = s.e ? 30 : (s.w || 3.4);
+    if (p.length === 2){ ctx.beginPath(); ctx.arc(p[0], p[1], ctx.lineWidth / 2, 0, 6.3); ctx.fill(); return; }
+    ctx.beginPath(); ctx.moveTo(p[0], p[1]);
+    for (let i = 2; i < p.length - 2; i += 2){ const mx = (p[i] + p[i + 2]) / 2, my = (p[i + 1] + p[i + 3]) / 2; ctx.quadraticCurveTo(p[i], p[i + 1], mx, my); }
+    ctx.lineTo(p[p.length - 2], p[p.length - 1]); ctx.stroke();
+  },
+
+  /* يفتح ورقة: {id, spec, path, label, page, readOnly, key} ويعيد متحكمًا */
+  open(o){
+    const self = this; const readOnly = !!o.readOnly;
+    let spec = o.spec || [], H = inkSheetH(spec), strokes = [], z = 1, tool = 'pen', color = INK_COLORS[0], penUsed = false, dirty = false, saveT = null, destroyed = false, loaded = false;
+    let penOnly = self.penSeen;
+    const content = h('div', { class: 'ink-content', dir: 'rtl' });
+    const cv = h('canvas', { class: 'ink-cv' }); const ctx = cv.getContext('2d');
+    const inner = h('div', { class: 'ink-inner' }, content, cv);
+    const size = h('div', { class: 'ink-size' }, inner);
+    const view = h('div', { class: 'ink-view', dir: 'ltr' }, size);
+    const status = h('span', { class: 'ink-status' }, '');
+    const build = () => { H = inkSheetH(spec); content.replaceChildren(...spec.map(b => inkBlockEl(b, { key: !!o.key }))); };
+    build();
+
+    let k = 1;
+    function layout(redraw = true){
+      const vw = view.clientWidth || INK_W; const s = (vw / INK_W) * z;
+      size.style.width = Math.round(INK_W * s) + 'px'; size.style.height = Math.round(H * s) + 'px';
+      inner.style.width = INK_W + 'px'; inner.style.height = H + 'px'; inner.style.transform = `scale(${s})`;
+      view.classList.toggle('zoomed', z > 1.01);
+      if (!redraw) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 3);
+      k = Math.max(0.5, Math.min(s * dpr, 4096 / H, 4096 / INK_W, Math.sqrt(14e6 / (INK_W * H))));
+      const bw = Math.round(INK_W * k), bh = Math.round(H * k);
+      if (cv.width !== bw || cv.height !== bh){ cv.width = bw; cv.height = bh; }
+      ctx.setTransform(k, 0, 0, k, 0, 0); self.paint(ctx, strokes, H);
+    }
+    const ro = window.ResizeObserver ? new ResizeObserver(() => { if (!destroyed) layout(); }) : null; if (ro) ro.observe(view);
+
+    /* ---------- الحفظ التلقائي ---------- */
+    const docOf = () => ({ id: o.id, v: 1, path: o.path || '', label: o.label || '', page: o.page || '', spec, H, strokes, pen: penUsed, ts: Date.now() });
+    let indexed = false;
+    function saveNow(withIndex){
+      clearTimeout(saveT); saveT = null; if (readOnly || !dirty) return Promise.resolve();
+      dirty = false; const d = docOf(); const p = Works.saveDoc(o.id, d);
+      status.textContent = '✓ حُفِظَتْ كِتَابَتُكِ';
+      if (withIndex || !indexed){ indexed = true; return Promise.all([p, Works.index(o.id, d)]); }
+      return p;
+    }
+    function touch(){ dirty = true; status.textContent = '… جَارٍ الْحِفْظُ'; clearTimeout(saveT); saveT = setTimeout(() => saveNow(false), 700); }
+    const onHide = () => { if (document.hidden) saveNow(true); };
+    document.addEventListener('visibilitychange', onHide); window.addEventListener('pagehide', onHide);
+
+    /* ---------- تحميل الكتابة السابقة ---------- */
+    const ready = (async () => {
+      const d = await Works.load(o.id);
+      if (d && Array.isArray(d.strokes)){
+        if (readOnly || !o.spec || (d.spec && d.strokes.length)){ if (d.spec && d.spec.length){ spec = d.spec; build(); } }
+        strokes = d.strokes.concat(strokes); penUsed = penUsed || !!d.pen; indexed = true;
+      }
+      loaded = true; if (!destroyed){ layout(); refreshTools(); }
+      return d;
+    })();
+
+    /* ---------- الإدخال ---------- */
+    const pos = e => { const r = cv.getBoundingClientRect(); return [Math.round((e.clientX - r.left) / r.width * INK_W * 10) / 10, Math.round((e.clientY - r.top) / r.height * H * 10) / 10]; };
+    const tapTarget = e => { for (const el of content.querySelectorAll('[data-tap]')){ const r = el.getBoundingClientRect(); if (e.clientX >= r.left - 6 && e.clientX <= r.right + 6 && e.clientY >= r.top - 6 && e.clientY <= r.bottom + 6) return el; } return null; };
+    let cur = null, curId = null, lastPenT = 0; const touches = new Map(); let pinch = null;
+    function down(e){
+      const tp = tapTarget(e); if (tp){ e.preventDefault(); if (tp._tap) tp._tap(); return; }
+      if (readOnly){ if (e.pointerType === 'touch') startTouch(e); return; }
+      if (e.pointerType === 'pen' && !self.penSeen){ self.penSeen = true; penOnly = true; try{ localStorage.setItem('lg_pen', '1'); }catch(err){} toast('✏️ الْقَلَمُ يَكْتُبُ، وَالْإِصْبَعُ يُحَرِّكُ الصَّفْحَةَ'); refreshTools(); }
+      const isTouch = e.pointerType === 'touch';
+      if (isTouch && (cur || Date.now() - lastPenT < 450)) return;          /* راحة اليد أثناء الكتابة بالقلم */
+      if (isTouch && (penOnly || tool === 'hand')){ startTouch(e); return; }
+      if (tool === 'hand'){ startTouch(e); return; }
+      if (cur) return;
+      e.preventDefault(); try{ cv.setPointerCapture(e.pointerId); }catch(err){}
+      if (e.pointerType === 'pen') penUsed = true;
+      const [x, y] = pos(e); curId = e.pointerId;
+      cur = tool === 'erase' ? { e: 1, p: [x, y] } : { c: color, w: e.pointerType === 'pen' ? Math.round((2.6 + 1.8 * (e.pressure || 0.5)) * 10) / 10 : 3.6, p: [x, y] };
+      strokes.push(cur);
+    }
+    function move(e){
+      if (cur && e.pointerId === curId){
+        e.preventDefault(); const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]; const p = cur.p;
+        for (const ev of (evs.length ? evs : [e])){ const [x, y] = pos(ev); const lx = p[p.length - 2], ly = p[p.length - 1]; if (Math.abs(x - lx) + Math.abs(y - ly) < 1.2) continue;
+          ctx.globalCompositeOperation = cur.e ? 'destination-out' : 'source-over'; ctx.strokeStyle = cur.e ? '#000' : cur.c; ctx.lineWidth = cur.e ? 30 : cur.w; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(x, y); ctx.stroke(); p.push(x, y); }
+        return;
+      }
+      if (touches.has(e.pointerId)) moveTouch(e);
+    }
+    function up(e){
+      if (cur && e.pointerId === curId){
+        if (e.pointerType === 'pen') lastPenT = Date.now();
+        if (e.type === 'pointercancel' && cur.p.length <= 2) strokes.pop();
+        cur = null; curId = null; self.paint(ctx, strokes, H); touch(); refreshTools(); return;
+      }
+      if (touches.has(e.pointerId)){ touches.delete(e.pointerId); if (pinch && touches.size < 2){ pinch = null; layout(); } }
+    }
+    function startTouch(e){ touches.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (touches.size === 2){ const [a, b] = [...touches.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, z }; } }
+    function moveTouch(e){
+      const t = touches.get(e.pointerId); const dx = e.clientX - t.x, dy = e.clientY - t.y; t.x = e.clientX; t.y = e.clientY;
+      if (pinch && touches.size >= 2){ const [a, b] = [...touches.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y) || 1; const nz = Math.max(1, Math.min(4, pinch.z * d / pinch.d)); if (Math.abs(nz - z) > 0.02){ z = nz; layout(false); } return; }
+      const sl = view.scrollLeft, stp = view.scrollTop; view.scrollLeft = sl - dx; view.scrollTop = stp - dy;
+      const leftover = dy - (stp - view.scrollTop); if (Math.abs(leftover) > 0.5) window.scrollBy(0, -leftover);
+    }
+    cv.addEventListener('pointerdown', down); cv.addEventListener('pointermove', move); cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+    cv.addEventListener('touchstart', e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
+    cv.addEventListener('contextmenu', e => e.preventDefault());
+
+    /* ---------- الأدوات ---------- */
+    const tb = (label, title, fn, cls) => h('button', { class: 'ink-b ' + (cls || ''), title, 'aria-label': title, onclick: fn }, label);
+    const bPen = tb('✏️', 'قلم', () => { tool = 'pen'; refreshTools(); }), bEr = tb('🧽', 'ممحاة', () => { tool = 'erase'; refreshTools(); }), bHand = tb('✋', 'تحريك الصفحة', () => { tool = 'hand'; refreshTools(); });
+    const bUndo = tb('↩️', 'تراجع عن آخر خط', () => { if (!strokes.length) return; strokes.pop(); self.paint(ctx, strokes, H); touch(); refreshTools(); });
+    const bClr = tb('🗑️', 'مسح الكل', () => { if (!self.count(strokes)) return; strokes.push({ clr: 1 }); self.paint(ctx, strokes, H); touch(); refreshTools(); toast('مُسِحَتِ الْوَرَقَةُ — اضْغَطِي ↩️ لِلتَّرَاجُعِ'); });
+    const setZ = nz => { z = Math.max(1, Math.min(4, nz)); layout(); refreshTools(); };
+    const bZi = tb('🔍＋', 'تكبير', () => setZ(z < 1.4 ? 1.5 : z < 1.9 ? 2 : z < 2.9 ? 3 : 4)), bZo = tb('🔍－', 'تصغير', () => setZ(z > 3.1 ? 3 : z > 2.1 ? 2 : z > 1.6 ? 1.5 : 1));
+    const bPenOnly = tb('', 'القلم فقط', () => { penOnly = !penOnly; refreshTools(); toast(penOnly ? '✏️ الْقَلَمُ فَقَطْ يَكْتُبُ' : '☝️ الْإِصْبَعُ يَكْتُبُ أَيْضًا'); }, 'wide');
+    const dots = INK_COLORS.map(c => h('button', { class: 'ink-dot', style: `background:${c}`, 'aria-label': 'لون', onclick: () => { color = c; tool = 'pen'; refreshTools(); } }));
+    function refreshTools(){
+      bPen.classList.toggle('on', tool === 'pen'); bEr.classList.toggle('on', tool === 'erase'); bHand.classList.toggle('on', tool === 'hand');
+      dots.forEach((d, i) => d.classList.toggle('on', INK_COLORS[i] === color && tool === 'pen'));
+      bPenOnly.textContent = penOnly ? '✏️ الْقَلَمُ فَقَطْ' : '☝️ قَلَمٌ وَإِصْبَعٌ'; bPenOnly.hidden = !self.penSeen;
+      bUndo.disabled = !strokes.length; bZo.disabled = z <= 1.01; bZi.disabled = z >= 3.99;
+      cv.style.cursor = tool === 'hand' ? 'grab' : 'crosshair';
+    }
+    const tools = readOnly ? h('div', { class: 'ink-tools' }, bZi, bZo) : h('div', { class: 'ink-tools' }, bPen, ...dots, bEr, bUndo, bHand, bZi, bZo, bPenOnly, bClr, status);
+    const el = h('div', { class: 'ink' + (readOnly ? ' ro' : '') }, tools, view);
+    refreshTools(); setTimeout(() => { if (!destroyed) layout(); }, 0);
+
+    return { el, ready, count: () => self.count(strokes), isPen: () => penUsed, strokes: () => strokes, spec: () => spec, layout,
+      flush: () => saveNow(true),
+      destroy(){ destroyed = true; clearTimeout(saveT); if (ro) ro.disconnect(); document.removeEventListener('visibilitychange', onHide); window.removeEventListener('pagehide', onHide); } };
+  },
+  /* عرض للقراءة فقط (لوحة بابا) */
+  viewer(id, opts = {}){ const c = this.open({ id, readOnly: true, key: opts.key !== false }); c.ready.then(d => { if (!d) c.el.replaceChildren(h('p', { class: 'tiny' }, '(الكتابة غير متاحة أو حُذفت)')); }); return c.el; }
+};
+
+/* ===================== خطوة كتابة داخل محطة ===================== */
+/* تعرض الورقة، وتحفظ تلقائيًا، وعند «خلصت» تعيد {id,n,pen}. الخروج قبل الإكمال لا يُضيّع ما كُتب. */
+function inkStep(g, { id, spec, path, label, page, intro, min = 2, done = '✅ خَلَصْتُ — أَرْسِلِي لِبَابَا' }){
+  return new Promise(res => {
+    const pad = Ink.open({ id, spec, path, label, page });
+    const finish = async r => { g.abortCurrent = null; try{ await pad.flush(); }catch(e){} pad.destroy(); res(r); };
+    g.abortCurrent = r => finish(r);
+    Log.ev({ k: 'ink_open', s: path, id });
+    g.body.replaceChildren(...kids(intro ? h('div', { class: 'card sand small' }, intro) : null, pad.el));
+    g.foot.replaceChildren(h('button', { class: 'btn btn-green', id: 'ink-done', onclick: () => {
+      if (pad.count() < min) return toast('اكْتُبِي فِي الْوَرَقَةِ أَوَّلًا ✏️');
+      Log.ev({ k: 'ink', s: path, id, n: pad.count(), pen: pad.isPen() }); finish({ id, n: pad.count(), pen: pad.isPen() });
+    } }, done));
+  });
+}
+/* يرسل ورقة مكتوبة إلى بابا للتقييم (يحدّث الطلب السابق لنفس المحطة إن كان لم يُقيَّم بعد) */
+async function inkSubmit({ id, station, lesson, title, key, skill, pen, n }){
+  Child.ensure(); const old = S.child.pending.find(p => p.type === 'ink' && p.ink === id && p.status === 'pending');
+  if (old){ old.ts = Date.now(); old.pen = !!pen; old.n = n; return Child.save(); }
+  return Child.addPending({ type: 'ink', station, lesson: lesson || '', title: title || '', ink: id, key: key || '', skill: skill || '', pen: !!pen, n: n || 0, page: pageOf(station) || null });
+}
+
 /* ===================== تعريف المحطات ===================== */
 const STATION_DEFS = [
   {key:'read',      title:'اسْمَعِي وَاقْرَئِي',        icon:'📖', skill:'read'},
@@ -2326,7 +2621,8 @@ const STATION_DEFS = [
   {key:'style',     title:'كَيْفَ أَقُولُ؟',             icon:'🪄', skill:null},
   {key:'transform', title:'آلَةُ التَّغْيِيرِ',         icon:'⚙️', skill:null},
   {key:'khat',      title:'الْخَطَّاطَةُ الصَّغِيرَةُ',  icon:'🖌️', skill:'khat'},
-  {key:'express',   title:'رَتِّبِي الْجُمْلَةَ',        icon:'🏗️', skill:'express'},
+  {key:'express',   title:'رَتِّبِي وَاكْتُبِي',         icon:'🏗️', skill:'express'},
+  {key:'sheet',     title:'وَرَقَةُ عَمَلِي',            icon:'📝', skill:'comp'},
   {key:'hw',        title:'وَاجِبِي فِي الْبَيْتِ',       icon:'📓', skill:'hw'},
   {key:'color',     title:'اكْتُبِي وَلَوِّنِي',          icon:'🎨', skill:null},
 ];
@@ -2585,10 +2881,11 @@ async function runStation(u, l, key){
     else if (key==='dict') r=await stDict(g,u,l,path);
     else if (key==='style') r=await stList(g,l.style,path,'🪄');
     else if (key==='transform') r=await stList(g,l.transform,path,'⚙️');
-    else if (key==='khat') r=await stKhat(g,l.khat,path,l.key);
+    else if (key==='khat') r=await stKhat(g,l.khat,path,l.key,N(l.title));
     else if (key==='color') r=await stColor(g,u,l,path);
     else if (key==='hw') r=await stHomework(g,u,l,path);
-    else if (key==='express') r=await stList(g,{title:'رَتِّبِي الْجُمْلَةَ', tip:'رَتِّبِي الْكَلِمَاتِ لِتَصِيرَ جُمْلَةً صَحِيحَةً. لَا تَنْسَيِ النُّقْطَةَ فِي النِّهَايَةِ.', items:expressItems(l), skill:'express'},path,'🏗️');
+    else if (key==='sheet') r=await stSheet(g,u,l,path);
+    else if (key==='express') r=await stExpress(g,u,l,path, {title:'رَتِّبِي الْجُمْلَةَ', tip:'رَتِّبِي الْكَلِمَاتِ لِتَصِيرَ جُمْلَةً صَحِيحَةً. لَا تَنْسَيِ النُّقْطَةَ فِي النِّهَايَةِ.', items:expressItems(l), skill:'express'},path,'🏗️');
   }catch(e){ console.error(e); toast('حَدَثَ خَطَأٌ، ارْجِعِي وَجَرِّبِي مَرَّةً ثَانِيَةً'); }
   if (!r || r.aborted){ if(!(r&&r.quiet)) Log.ev({k:'station_abort', s:path}); return go('lesson', l.key); }
   const idx=STATION_DEFS.findIndex(d=>d.key===key); const nxt=STATION_DEFS[idx+1];
@@ -2718,7 +3015,7 @@ async function stVocab(g,u,l,path){
   const r=await runItems(items,{g,path,skill:'vocab',autoSay:false});
   if(r.aborted) return r;
   const acc=(memAcc + r.acc*2)/3;
-  return {acc, ms:Date.now()-t0, total:r.total+pairs.length, skillTally:Object.assign({}, r.skillTally, {vocab:{ok:(r.skillTally.vocab?r.skillTally.vocab.ok:0)+Math.round(memAcc*pairs.length), total:(r.skillTally.vocab?r.skillTally.vocab.total:0)+pairs.length}}), extra:{moves}};
+  return {acc, ms:Date.now()-t0, total:r.total+pairs.length, skillTally:r.skillTally, extra:{moves}};
 }
 
 /* ---------- 4) أذن الصقر ---------- */
@@ -2758,11 +3055,12 @@ async function stSort(g, sort, path, opts={}){
     });
     if(r.aborted){ clearInterval(iv); return r; }
     results.push(r);
-    Log.ev({k:'answer', s:path, skill:sort.skill, it:stripT(it.w), ans:r.ans, ok:r.ok, tries:r.tries, ms:r.ms});
+    r.mode = r.ok ? 'ind' : r.tries>=2 ? 'shown' : 'help';
+    Log.ev({k:'answer', s:path, skill:sort.skill, it:stripT(it.w), ans:r.ans, ok:r.ok, mode:r.mode, tries:r.tries, ms:r.ms});
     if(!r.ok) Mistakes.add({t:'sortone', w:it.w, baskets:sort.baskets, b:it.b, skill:sort.skill}, sort.skill, path);
   }
   clearInterval(iv); const okN=results.filter(r=>r.ok).length;
-  return {acc: okN/results.length, ms:Date.now()-t0, total:results.length, skillTally:{[sort.skill]:{ok:okN,total:results.length}}};
+  return {acc: okN/results.length, ms:Date.now()-t0, total:results.length, skillTally:{[sort.skill]:{ok:okN,total:results.length, help:results.filter(r=>r.mode==='help').length, shown:results.filter(r=>r.mode==='shown').length}}};
 }
 
 /* ---------- 6) الإملاء السحري ---------- */
@@ -2773,7 +3071,52 @@ async function stDict(g,u,l,path){
   const items=l.dict.words.map((w,i)=>({t:'dict', w, mode:modes[i]||'hidden', skill:'dict'}));
   const sw=N(l.dict.sentence).replace(/[.؟!،]/g,'').split(/\s+/).filter(Boolean);
   items.push({t:'order', q:'رَتِّبِي كَلِمَاتِ الْجُمْلَةِ ثُمَّ ضَعِي النُّقْطَةَ:', words:sw.concat(['.']), answer:sw.join(' ')+' .', skill:'dict'});
-  return runItems(items,{g,path,skill:'dict'});
+  const t0=Date.now();
+  /* الجزء الأول تدريب (الحروف جاهزة) ولا يُحسب إتقانًا؛ الإملاء المستقل بالقلم هو القياس */
+  const pr=await runItems(items,{g,path,skill:'dict',practice:true});
+  if(pr.aborted) return pr;
+  const spec=[{t:'title',x:'إِمْلَائِي بِقَلَمِي ✍️'},{t:'note',x:'اضْغَطِي 🔊 وَاسْمَعِي، ثُمَّ اكْتُبِي عَلَى السَّطْرِ مِنْ غَيْرِ مُسَاعَدَةٍ.'},{t:'dict',w:l.dict.words.concat([l.dict.sentence])}];
+  const w=await inkStep(g,{id:path, spec, path, label:'إملاء — '+N(l.title), intro:'✍️ الْآنَ الْإِمْلَاءُ الْحَقِيقِيُّ: اكْتُبِي بِقَلَمِكِ مَا تَسْمَعِينَ. بَابَا يُصَحِّحُ.'});
+  if(w.aborted) return w;
+  await inkSubmit({id:w.id, station:path, lesson:l.key, title:'إملاء — '+N(l.title), key:l.dict.words.concat([l.dict.sentence]).map(N).join(' ، '), skill:'dict', pen:w.pen, n:w.n});
+  return {acc:0, ms:Date.now()-t0, pending:true, skillTally:pr.skillTally, pendingMsgs:['أَرْسَلْتُ إِمْلَائِي لِبَابَا 📨','بَابَا يُصَحِّحُهُ وَيُعْطِيكِ النُّجُومَ ⭐']};
+}
+/* ---------- 10) رتّبي ثم اكتبي جملة من عندك ---------- */
+async function stExpress(g,u,l,path,block){
+  const ok=await introCard(g,{emoji:'🏗️', title:block.title, text:block.tip, tip:'أَوَّلًا رَتِّبِي الْكَلِمَاتِ، ثُمَّ اكْتُبِي جُمْلَةً مِنْ عِنْدِكِ بِقَلَمِكِ.'});
+  if(ok.aborted) return ok; const t0=Date.now();
+  const pr=await runItems(block.items.map(it=>Object.assign({}, it, {skill:'express'})),{g,path,skill:'express',autoSay:false,practice:true});
+  if(pr.aborted) return pr;
+  const oral=EXTRA.oral[l.key]; const q= oral? oral.q : 'اكْتُبِي جُمْلَةً عَنْ: '+l.title;
+  const spec=[{t:'title',x:'أَكْتُبُ جُمْلَتِي ✏️'},{t:'note',x:q},{t:'note',x:'اكْتُبِي جُمْلَةً كَامِلَةً أَوْ جُمْلَتَيْنِ، وَلَا تَنْسَيِ النُّقْطَةَ.'},{t:'lines',n:3}];
+  const w=await inkStep(g,{id:path, spec, path, label:'تعبير كتابي — '+N(l.title), intro:'✏️ فَكِّرِي ثُمَّ اكْتُبِي جُمْلَتَكِ بِنَفْسِكِ.'});
+  if(w.aborted) return w;
+  await inkSubmit({id:w.id, station:path, lesson:l.key, title:'تعبير كتابي — '+N(l.title), key:'جملة من إنشائها — تُقيَّم: المعنى، ترتيب الكلمات، الإملاء، النقطة.', skill:'express', pen:w.pen, n:w.n});
+  return {acc:0, ms:Date.now()-t0, pending:true, skillTally:pr.skillTally, pendingMsgs:['أَرْسَلْتُ جُمْلَتِي لِبَابَا 📨','بَابَا يَقْرَؤُهَا وَيُعْطِيكِ النُّجُومَ ⭐']};
+}
+/* ---------- ورقة عملي: توصيل ودوائر وعلامة صح وكتابة جواب — كلها بالقلم في موضع الإجابة ---------- */
+function sheetSpec(l){
+  const vp=l.vocab.slice(0,4); const circ=l.sort; const b0=circ.baskets[0]; const cw=shuffle(circ.items.slice()).slice(0,8);
+  const qs=l.quiz.slice(0,2).map(q=>{ const o=shuffle(q.opts.map((x,i)=>({x,ok:i===q.a}))); return {q:q.q, o:o.map(z=>z.x), a:o.findIndex(z=>z.ok)}; });
+  const wq=l.quiz[2]||l.quiz[0];
+  const left=shuffle(vp.map(v=>v.m));
+  const spec=[{t:'title',x:'وَرَقَةُ عَمَلِي — '+l.title},
+    {t:'note',x:'١) صِلِي كُلَّ كَلِمَةٍ بِمَعْنَاهَا بِخَطٍّ.'},{t:'match',r:vp.map(v=>v.w),l:left},
+    {t:'note',x:'٢) ضَعِي دَائِرَةً حَوْلَ كَلِمَاتِ: '+b0.label},{t:'circle',w:cw.map(x=>x.w)},
+    {t:'note',x:'٣) ضَعِي عَلَامَةَ ✓ فِي مُرَبَّعِ الْجَوَابِ الصَّحِيحِ.'}, ...qs.map(q=>({t:'tick',q:q.q,o:q.o})),
+    {t:'note',x:'٤) اكْتُبِي الْجَوَابَ فِي جُمْلَةٍ كَامِلَةٍ: '+wq.q},{t:'lines',n:2}];
+  const key=['١) '+vp.map(v=>`${N(v.w)} ← ${N(v.m)}`).join(' ؛ '), '٢) '+cw.filter(x=>x.b===b0.id).map(x=>N(x.w)).join('، '), '٣) '+qs.map(q=>N(q.o[q.a])).join(' ؛ '), '٤) '+N(wq.opts[wq.a])].join('\n');
+  return {spec, key};
+}
+async function stSheet(g,u,l,path){
+  const ok=await introCard(g,{emoji:'📝', title:'وَرَقَةُ عَمَلِي', tip:'حُلِّي الْوَرَقَةَ بِقَلَمِكِ مِثْلَ كِتَابِكِ: صِلِي، وَضَعِي دَائِرَةً، وَعَلَامَةَ ✓، وَاكْتُبِي.'});
+  if(ok.aborted) return ok; const t0=Date.now();
+  const old=await Works.load(path); let made = (old && old.spec && old.sheetKey) ? {spec:old.spec, key:old.sheetKey} : sheetSpec(l);
+  const w=await inkStep(g,{id:path, spec:made.spec, path, label:'ورقة عمل — '+N(l.title), intro:'📝 كُلُّ مَا تَكْتُبِينَهُ يُحْفَظُ. تَقْدِرِينَ تُكَبِّرِينَ الْوَرَقَةَ بِـ 🔍＋.'});
+  try{ const d=await Works.load(path); if(d && !d.sheetKey){ d.sheetKey=made.key; Works.saveDoc(path,d); } }catch(e){}
+  if(w.aborted) return w;
+  await inkSubmit({id:w.id, station:path, lesson:l.key, title:'ورقة عمل — '+N(l.title), key:made.key, skill:'comp', pen:w.pen, n:w.n});
+  return {acc:0, ms:Date.now()-t0, pending:true, pendingMsgs:['أَرْسَلْتُ وَرَقَتِي لِبَابَا 📨','بَابَا يُصَحِّحُهَا وَيُعْطِيكِ النُّجُومَ ⭐']};
 }
 
 /* ---------- 7/8/10) قوائم عناصر ---------- */
@@ -2795,17 +3138,15 @@ function expressItems(l){
 
 /* ---------- 11) واجبي في البيت: من الكتاب، يعتمده بابا ---------- */
 async function stHomework(g,u,l,path){
-  Child.ensure(); const text=EXTRA.hw[l.key]||'افْتَحِي دَفْتَرَكِ وَاكْتُبِي مَا طَلَبَتْهُ الْمُعَلِّمَةُ.'; const t0=Date.now();
-  const pend=S.child.pending.find(p=>p.station===path && p.status==='pending'); const done=Progress.stars(path)>0;
-  return new Promise(res=>{
-    g.abortCurrent=r=>res(r);
-    g.body.replaceChildren(
-      h('div',{class:'card sand small'}, '📓 هَذَا وَاجِبُكِ مِنَ الْكِتَابِ. اعْمَلِيهِ فِي دَفْتَرِكِ، ثُمَّ اضْغَطِي ✅ لِيَرَاهُ بَابَا وَيُعْطِيكِ ٣ نُجُومٍ.'),
-      h('div',{class:'prompt'}, h('span',{class:'emoji'},'📓'), N(text)),
-      done? h('div',{class:'banner ok'},'✅ وَافَقَ بَابَا عَلَى وَاجِبِكِ! أَحْسَنْتِ 🌟🌟🌟') : pend? h('div',{class:'banner'},'⏳ أَرْسَلْتِهِ لِبَابَا، انْتَظِرِي مُوَافَقَتَهُ.') : null);
-    g.foot.replaceChildren( (done||pend) ? h('button',{class:'btn', onclick:()=>res({aborted:true, quiet:true})},'الْعَوْدَةُ لِلْخَرِيطَةِ 🗺️') :
-      h('button',{class:'btn btn-green', onclick:async()=>{ await Child.addPending({type:'hw', task:true, station:path, lesson:l.key, text:N(text), page:(BOOK.lessons[l.key]||{}).hw||null}); Log.ev({k:'hw_sent', s:path}); res({acc:0, ms:Date.now()-t0, pending:true, pendingMsgs:['أَرْسَلْتُ وَاجِبِي لِبَابَا 📨','بَابَا يَرَاهُ وَيُعْطِيكِ ٣ نُجُومٍ ⭐']}); }},'أَنْجَزْتُهُ فِي دَفْتَرِي ✅'));
-  });
+  const text=EXTRA.hw[l.key]||'اكْتُبِي مَا طَلَبَتْهُ الْمُعَلِّمَةُ.'; const t0=Date.now();
+  const ok=await introCard(g,{emoji:'📓', title:'وَاجِبِي', text, tip:'حُلِّي وَاجِبَكِ هُنَا بِقَلَمِكِ عَلَى السُّطُورِ، ثُمَّ أَرْسِلِيهِ لِبَابَا.'});
+  if(ok.aborted) return ok;
+  const spec=[{t:'title',x:'وَاجِبِي — '+l.title},{t:'note',x:text},{t:'lines',n:5}];
+  const w=await inkStep(g,{id:path, spec, path, label:'واجب — '+N(l.title)});
+  if(w.aborted) return w;
+  await inkSubmit({id:w.id, station:path, lesson:l.key, title:'واجب — '+N(l.title), key:N(text), skill:'hw', pen:w.pen, n:w.n});
+  Log.ev({k:'hw_sent', s:path});
+  return {acc:0, ms:Date.now()-t0, pending:true, pendingMsgs:['أَرْسَلْتُ وَاجِبِي لِبَابَا 📨','بَابَا يَرَاهُ وَيُعْطِيكِ النُّجُومَ ⭐']};
 }
 
 /* ---------- 9) الخطاطة: لوحة تتبّع عامة مع ألوان ---------- */
@@ -2865,12 +3206,15 @@ async function traceCanvas(g, text, {lessonKey, path, kind='khat', fontMax=120, 
   Log.ev({k:'khat', s:path, score, precision:Math.round(precision*100), coverage:Math.round(coverage*100), asset:assetId, ms:Date.now()-t0, text:stripT(txt).slice(0,30)});
   return {score, stars, precision, coverage, assetId, ms:Date.now()-t0};
 }
-async function stKhat(g, sentence, path, lessonKey){
-  const ok=await introCard(g,{emoji:'🖌️', title:'الْخَطَّاطَةُ الصَّغِيرَةُ', tip:'اخْتَارِي لَوْنَكِ، ثُمَّ مَرِّرِي إِصْبَعَكِ فَوْقَ الْحُرُوفِ الرَّمَادِيَّةِ بِهُدُوءٍ. اكْتُبِي الْجُمْلَةَ كُلَّهَا ثُمَّ اضْغَطِي ✅.'});
-  if(ok.aborted) return ok;
-  const r=await traceCanvas(g, sentence, {lessonKey, path, kind:'khat'});
-  if(r.aborted) return r;
-  return {acc: r.stars/3, ms:r.ms, stars:r.stars, total:1, skillTally:{khat:{ok:r.stars>=2?1:0,total:1}}, extra:{score:r.score, asset:r.assetId}};
+async function stKhat(g, sentence, path, lessonKey, title){
+  const ok=await introCard(g,{emoji:'🖌️', title:'الْخَطَّاطَةُ الصَّغِيرَةُ', tip:'انْظُرِي إِلَى الْجُمْلَةِ، ثُمَّ اكْتُبِيهَا بِخَطِّكِ الْجَمِيلِ عَلَى السُّطُورِ الْفَارِغَةِ. الْحُرُوفُ تَجْلِسُ عَلَى السَّطْرِ.'});
+  if(ok.aborted) return ok; const t0=Date.now();
+  const spec=[{t:'title',x:'خَطِّي الْجَمِيلُ 🖌️'},{t:'model',x:sentence},{t:'note',x:'اكْتُبِي الْجُمْلَةَ بِخَطِّكِ مَرَّتَيْنِ عَلَى السُّطُورِ.'},{t:'lines',n:3}];
+  const w=await inkStep(g,{id:path, spec, path, label:'خط — '+stripT(N(sentence)).slice(0,30)});
+  if(w.aborted) return w;
+  await inkSubmit({id:w.id, station:path, lesson:lessonKey, title:'خط — '+(title||''), key:N(sentence), skill:'khat', pen:w.pen, n:w.n});
+  Log.ev({k:'khat', s:path, ink:w.id, pen:w.pen, ms:Date.now()-t0, text:stripT(N(sentence)).slice(0,30)});
+  return {acc:0, ms:Date.now()-t0, pending:true, pendingMsgs:['أَرْسَلْتُ خَطِّي لِبَابَا 📨','بَابَا يَرَاهُ وَيُعْطِيكِ النُّجُومَ ⭐']};
 }
 
 /* ---------- 11) اكتبي ولوّني ---------- */
@@ -3072,7 +3416,12 @@ async function runIntroGame(gm){
     const ok=await introCard(g,{emoji:gm.icon||'🏗️', title:gm.title, tip:gm.intro}); if(ok.aborted) r=ok; else r=await runItems(gm.items.map(it=>Object.assign({},it,{skill:gm.skill})),{g,path,skill:gm.skill,autoSay:false});
   } else if (gm.kind==='read'){ r=await introRead(g, gm, path); }
   else if (gm.kind==='khat'){
-    const ok=await introCard(g,{emoji:'🖌️', title:gm.title, text:gm.intro, tip:'مَرِّرِي إِصْبَعَكِ فَوْقَ الْحُرُوفِ الرَّمَادِيَّةِ، وَانْتَبِهِي لِلسَّطْرِ.'}); if(ok.aborted) r=ok; else { const tr=await traceCanvas(g, gm.text, {lessonKey:path, path, kind:'khat'}); r = tr.aborted? tr : {acc:tr.stars/3, ms:tr.ms, stars:tr.stars, total:1, skillTally:{khat:{ok:tr.stars>=2?1:0,total:1}}, extra:{score:tr.score, asset:tr.assetId}}; }
+    const ok=await introCard(g,{emoji:'🖌️', title:gm.title, text:gm.intro, tip:'اكْتُبِي بِقَلَمِكِ عَلَى السُّطُورِ الْفَارِغَةِ: الْجُمْلَةَ، ثُمَّ الْحُرُوفَ وَالْكَلِمَاتِ، ثُمَّ اسْمَكِ.'}); if(ok.aborted) r=ok; else {
+      const t0=Date.now();
+      const spec=[{t:'title',x:'خَطِّي الْجَمِيلُ 🖌️'},{t:'model',x:gm.text},{t:'lines',n:2},{t:'note',x:'اكْتُبِي كُلَّ حَرْفٍ مَرَّتَيْنِ.'},{t:'model',x:'ب   ت   ث   ج   ح   خ   س   ص   ع   م   ه   ي'},{t:'lines',n:2},{t:'note',x:'اكْتُبِي هَذِهِ الْكَلِمَاتِ.'},{t:'model',x:'بَيْت      قَمَر      شَمْس      مَدْرَسَة'},{t:'lines',n:1},{t:'note',x:'اكْتُبِي اسْمَكِ.'},{t:'lines',n:1}];
+      const w=await inkStep(g,{id:path, spec, path, label:'خط — حروف وكلمات وجملة'});
+      if(w.aborted) r=w; else { await inkSubmit({id:w.id, station:path, lesson:'intro', title:'خط — حروف وكلمات وجملة', key:N(gm.text), skill:'khat', pen:w.pen, n:w.n}); Log.ev({k:'khat', s:path, ink:w.id, pen:w.pen}); r={acc:0, ms:Date.now()-t0, pending:true, pendingMsgs:['أَرْسَلْتُ خَطِّي لِبَابَا 📨','بَابَا يَرَاهُ وَيُعْطِيكِ النُّجُومَ ⭐']}; }
+    }
   } else if (gm.kind==='first'){
     const ok=await introCard(g,{emoji:'🔊', title:gm.title, tip:gm.intro}); if(ok.aborted) r=ok; else {
       const letters='ابتثجحخدذرزسشصضطظعغفقكلمنهوي';
@@ -3157,7 +3506,8 @@ const PSECTIONS=[
   {key:'progress',  icon:'📈', title:'التقدم',              desc:'النجوم، إتقان المهارات، سرعة القراءة، معرض الخط'},
   {key:'mistakes',  icon:'🧰', title:'صندوق الأخطاء',      desc:'الأسئلة التي أخطأت فيها وتحتاج مراجعة معك', badge:()=>Mistakes.count()},
   {key:'messages',  icon:'💌', title:'الرسائل والمهمة',    desc:'تشجيع لها، مهمة اليوم، ورسائل منها', badge:()=>unreadNotes().length},
-  {key:'settings',  icon:'⚙️', title:'الإعدادات',           desc:'الاسم، الهدف اليومي، المكافأة، الرمز السري'},
+  {key:'review',    icon:'🔎', title:'مراجعة النصوص والصوت', desc:'اسمع كل مقطع واقرأ كل نص وجواب، وعلّم على الخطأ ليُصحَّح'},
+  {key:'settings',  icon:'⚙️', title:'الإعدادات',           desc:'الاسم، الهدف، المكافأة، الرمز، حذف البيانات ومدة الاحتفاظ'},
 ];
 const PTABS=PSECTIONS.map(x=>[x.key,x.title]);
 function pendingList(){ Child.ensure(); Parent.ensure(); return S.child.pending.filter(p=>p.status==='pending' && !S.parent.ratings[p.id] && !S.parent.taskConfirms[p.id]); }
@@ -3230,10 +3580,19 @@ function skillName(k){ return (CONTENT.skills[k]||{}).name||k||''; }
 function audioEl(id){ const a=h('audio',{controls:'', preload:'none', style:'width:100%;max-width:420px'}); Blobs.url(id).then(u=>{ if(u) a.src=u; else a.replaceWith(h('span',{class:'tiny'},'(التسجيل غير متاح)')); }).catch(()=>{}); return a; }
 function imgEl(id, alt){ const im=h('img',{alt:alt||'', loading:'lazy'}); Blobs.url(id).then(u=>{ if(u) im.src=u; }).catch(()=>{}); return im; }
 function recordingsGallery(limit=12){
-  Child.ensure(); const recs=(S.child.recordings||[]).slice(0,limit);
+  Child.ensure(); const recs=(S.child.recordings||[]).filter(r=>!isDeleted(r.id)).slice(0,limit);
   if(!recs.length) return h('div',{class:'empty'},'ما فيه تسجيلات صوتية بعد. تُحفظ تلقائياً عندما تقرأ أو تنشد أو تجيب شفهياً داخل اللعبة.');
   const kindName={read:'📖 قراءة',lib:'📚 قصة من المكتبة',nasheed:'🎵 نشيد',oral:'🗣️ تعبير شفهي'};
-  return h('div',{class:'stack', style:'gap:8px'}, ...recs.map(r=>h('div',{class:'card', style:'padding:10px 12px'}, h('div',{class:'row between'}, h('b',{}, kindName[r.kind]||'🎙️ تسجيل', ' — ', stationName(r.path)), h('span',{class:'tiny'}, `${fmtDay(dayKey(r.ts))} ${fmtClock(r.ts)} · ${fmtMs(r.ms||0)}`)), r.text? h('p',{class:'tiny'}, r.text):null, audioEl(r.id))));
+  return h('div',{class:'stack', style:'gap:8px'}, ...recs.map(r=>h('div',{class:'card', style:'padding:10px 12px'}, h('div',{class:'row between'}, h('b',{}, kindName[r.kind]||'🎙️ تسجيل', ' — ', stationName(r.path)), h('span',{class:'tiny'}, `${fmtDay(dayKey(r.ts))} ${fmtClock(r.ts)} · ${fmtMs(r.ms||0)}`)), r.text? h('p',{class:'tiny'}, r.text):null, audioEl(r.id), delBtn('rec', r.id, 'حذف التسجيل'))));
+}
+/* ---------- الحذف ---------- */
+function isDeleted(id){ Parent.ensure(); const d=S.parent.deletes||{}; return !!d[id]; }
+async function parentDelete(kind, id){ Parent.ensure(); S.parent.deletes=S.parent.deletes||{}; S.parent.deletes[id]=Date.now(); await Parent.save(); try{ if(kind==='ink') await Works.remove(id); else await Blobs.delete(id); }catch(e){} Log.ev({k:'parent_delete', kind}); }
+function delBtn(kind, id, label){ return h('button',{class:'btn btn-sm btn-ghost', style:'color:var(--bad);align-self:flex-start', onclick:()=>openSheet(h('div',{class:'stack'}, h('h3',{},'تأكيد الحذف'), h('p',{class:'small'},'يُحذف نهائيًا من القاعدة ولا يمكن استرجاعه.'), h('div',{class:'row'}, h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:async()=>{ closeSheet(); await parentDelete(kind,id); toast('حُذف ✅'); renderParent(S.nav[0]); }},'🗑️ احذف'), h('button',{class:'btn btn-sm', onclick:closeSheet},'إلغاء'))))}, '🗑️ '+(label||'حذف')); }
+function worksGallery(limit=20){
+  Child.ensure(); const ws=(S.child.works||[]).filter(w=>!isDeleted(w.id)).slice(0,limit);
+  if(!ws.length) return h('div',{class:'empty'},'ما فيه كتابة محفوظة بعد. تُحفظ تلقائيًا من محطات الخط والإملاء والتعبير وورقة العمل والواجب.');
+  return h('div',{class:'stack', style:'gap:8px'}, ...ws.map(w=>{ const box=h('div',{}); const card=h('div',{class:'card work-card', style:'padding:10px 12px'}, h('div',{class:'row between'}, h('b',{}, w.label||stationName(w.path)), h('span',{class:'tiny'}, `${fmtDay(dayKey(w.ts))} ${fmtClock(w.ts)}`)), h('p',{class:'tiny'}, stationName(w.path), ' · 📖 ', srcOf(w.path), ' · ', w.pen?'✏️ بالقلم':'☝️ بالإصبع', ` · ${w.n||0} خطًّا`), h('div',{class:'row'}, h('button',{class:'btn btn-sm btn-sky', onclick:e=>{ if(box.firstChild){ box.replaceChildren(); e.currentTarget.textContent='👁️ عرض'; } else { box.replaceChildren(Ink.viewer(w.id)); e.currentTarget.textContent='إخفاء'; } }},'👁️ عرض'), delBtn('ink', w.id, 'حذف')), box); return card; }));
 }
 /* اللوحة: صفحة رئيسية (يحتاجك الآن + أرقام اليوم + بلاطات الأقسام)، وكل قسم بصفحة مستقلة مع شرح */
 function renderParent(tab='hub'){
@@ -3255,7 +3614,7 @@ function renderParent(tab='hub'){
       _unsubP.push(Store.subscribe('progress', d=>{ if(d) S.progress=d; }));
     }
     if (tab==='messages'){ Parent.ensure(); S.parent.seenNotes=S.parent.seenNotes||{}; let ch=false; for(const n of S.child.notes){ if(!S.parent.seenNotes[n.id]){ S.parent.seenNotes[n.id]=Date.now(); ch=true; } } if(ch) Parent.save(); }
-    body.replaceChildren(...kids(({hub:tabHub, today:tabToday, plan:tabPlan, progress:tabProgress, mistakes:tabMistakes, approvals:tabApprovals, messages:tabMessages, settings:tabSettings}[tab]||tabHub)()));
+    body.replaceChildren(...kids(({hub:tabHub, today:tabToday, plan:tabPlan, progress:tabProgress, mistakes:tabMistakes, approvals:tabApprovals, messages:tabMessages, settings:tabSettings, review:tabReview}[tab]||tabHub)()));
   })();
 }
 /* الصفحة الرئيسية للوحة */
@@ -3265,7 +3624,7 @@ function tabHub(){
   const mins=minutesOfSessions(list); const starsToday=stations.reduce((a,s)=>a+(s.stars||0),0);
   const pend=pendingList(); const notes=unreadNotes(); const plan=todayPlanStatus();
   const needs=[];
-  if (pend.length) needs.push(h('div',{class:'need'}, h('span',{class:'need-ic'},'⏳'), h('div',{class:'need-b'}, h('b',{}, `${pend.length} ${pend.length===1?'شيء ينتظر':'أشياء تنتظر'} اعتمادك`), h('span',{class:'tiny'}, pend.slice(0,3).map(x=>x.type==='read'?'قراءة':x.type==='nasheed'?'نشيد':x.type==='hw'?'واجب':'مهمة').join('، '))), h('button',{class:'btn btn-sm btn-green', onclick:()=>renderParent('approvals')},'اعتمد الآن')));
+  if (pend.length) needs.push(h('div',{class:'need'}, h('span',{class:'need-ic'},'⏳'), h('div',{class:'need-b'}, h('b',{}, `${pend.length} ${pend.length===1?'شيء ينتظر':'أشياء تنتظر'} اعتمادك`), h('span',{class:'tiny'}, pend.slice(0,3).map(x=>x.type==='ink'?'كتابة بالقلم':x.type==='read'?'قراءة':x.type==='nasheed'?'نشيد':x.type==='hw'?'واجب':'مهمة').join('، '))), h('button',{class:'btn btn-sm btn-green', onclick:()=>renderParent('approvals')},'اعتمد الآن')));
   if (plan.total) needs.push(h('div',{class:'need'}, h('span',{class:'need-ic'}, plan.done===plan.total?'✅':'💡'), h('div',{class:'need-b'}, h('b',{}, `خطة اليوم: ${plan.done} من ${plan.total}`), h('span',{class:'tiny'}, plan.done===plan.total? 'أنجزت كل مهمات اليوم 🎉' : 'الباقي: '+plan.items.filter(it=>!targetDoneToday(it.path)).map(it=>it.label||stationName(it.path)).join('، '))), h('button',{class:'btn btn-sm', onclick:()=>renderParent('plan')},'الخطة')));
   if (notes.length) needs.push(h('div',{class:'need'}, h('span',{class:'need-ic'},'📨'), h('div',{class:'need-b'}, h('b',{}, `${notes.length} ${notes.length===1?'رسالة جديدة':'رسائل جديدة'} منها`), h('span',{class:'tiny'}, notes[0].text.slice(0,60))), h('button',{class:'btn btn-sm', onclick:()=>renderParent('messages')},'اقرأ')));
   if (!needs.length) needs.push(h('div',{class:'need ok'}, h('span',{class:'need-ic'},'✅'), h('div',{class:'need-b'}, h('b',{},'ما فيه شيء ينتظرك الآن'), h('span',{class:'tiny'},'كل الاعتمادات تمت، ولا توجد رسائل جديدة.'))));
@@ -3306,7 +3665,7 @@ function tabToday(){
     return h('div',{class:'tl-item'}, h('div',{class:'t'}, `${fmtClock(st.t-(st.ms||0))}–${fmtClock(st.t)}`),
       h('div',{class:'b'}, h('b',{}, stationName(st.s), h('span',{class:'tiny', style:'font-weight:500'}, ' · 📖 ', srcOf(st.s))),
         h('span',{class:'small'}, st.pending? h('span',{class:'pill warn'},'⏳ بانتظار اعتمادك') : h('span',{class:'st'}, starsTxt(st.stars||0)), ` · ${fmtMs(st.ms||0)}`, st.acc!==undefined && !st.pending? ` · دقة ${st.acc}٪`:'' ,
-          reads.length? ` · قراءة ${reads[0].wpm} كلمة/د`:'' , khat? ` · خط ${khat.score}/100`:''),
+          reads.length? ` · قراءة ${reads[0].wpm} كلمة/د`:'' , khat? (khat.ink? ' · خط بالقلم' : ` · خط ${khat.score}/100`):''),
         (answers.length||taps.length) ? h('details',{}, h('summary',{}, `التفاصيل (${answers.length} إجابة${taps.length?`، ${taps.length} كلمة سمعتها`:''})`),
           ...answers.map(a=>h('div',{class:'ev'}, h('span',{class:a.ok?'ok':'bad'}, a.ok?'✓':'✗'), h('span',{}, a.it||''), a.ans? h('span',{class:'muted'}, '← ', a.ans):null, h('span',{class:'muted'}, `${a.tries?a.tries+' محاولة خاطئة · ':''}${Math.round((a.ms||0)/1000)} ث${a.hint?' · استخدمت التلميح':''}`))),
           taps.length? h('div',{class:'ev'}, '🔊 كلمات ضغطتها لتسمعها: ', taps.join('، ')):null) : null,
@@ -3355,14 +3714,16 @@ function actLine(e){
     case 'station_start': return row('start','▶️','بدأت ', name(e.s), h('span',{class:'muted'},' · 📖 ', srcOf(e.s)));
     case 'station_abort': return e._dup ? null : row('bad','✕','خرجت من ', name(e.s), h('span',{class:'muted'},' قبل الإكمال'));
     case 'quit':  return row('bad','✕','ضغطت «أخرج» من ', name(e.s), h('span',{class:'muted'}, ` عند السؤال ${e.at||'?'} من ${e.of||'?'}${e.it? ' ('+e.it+')':''} · بعد ${fmtMs(e.ms||0)}`));
-    case 'answer':return row(e.ok?'ok':'bad', e.ok?'✓':'✗', h('span',{}, e.it||''), e.ans? h('span',{class:'muted'},' ← ', e.ans):'', h('span',{class:'muted'}, ` · ${e.tries? e.tries+' خطأ قبلها · ':''}${Math.round((e.ms||0)/1000)} ث${e.hint?' · تلميح':''}`));
+    case 'ink':   return row('ok','✍️', (e.pen?'كتبت بالقلم':'كتبت بالإصبع')+` (${e.n||0} خطًّا)`, h('span',{class:'muted'}, ' · أُرسلت لك للتقييم'));
+    case 'ink_open': return null;
+    case 'answer':return row(e.ok?'ok':'bad', e.ok?'✓':'✗', h('span',{class:'pill '+(e.mode==='ind'?'ind':e.mode==='shown'?'shown':e.mode==='help'?'help':'')}, e.mode==='ind'?'مستقلة':e.mode==='shown'?'كُشف الجواب':e.mode==='help'?'بمساعدة':e.mode==='rec'?'تسجيل':''), ' ', h('span',{}, e.it||''), e.ans? h('span',{class:'muted'},' ← ', e.ans):'', h('span',{class:'muted'}, ` · ${e.tries? e.tries+' خطأ قبلها · ':''}${Math.round((e.ms||0)/1000)} ث${e.hint?' · تلميح':''}`));
     case 'try':   return row('bad','✗','محاولة خاطئة: ', h('span',{}, e.it||''), e.ans? h('span',{class:'muted'},' ← ', e.ans):'');
     case 'hint':  return row('sys','🔎','طلبت تلميحًا', e.it? h('span',{class:'muted'},' في: '+e.it):'');
     case 'tts':   return row('sys','🔊','سمعت: ', h('span',{class:'muted'}, e.txt||''));
     case 'word_tap': return row('sys','👆🔊','ضغطت كلمة لتسمعها: ', h('span',{class:'muted'}, e.w||''));
     case 'read_end': return row('ok','📖','قرأت بصوت عالٍ', h('span',{class:'muted'}, ` · ${e.wpm||0} كلمة/دقيقة · ${fmtMs(e.ms||0)}${e.rec?' · سجّلت صوتها':''}`));
     case 'nasheed_play': return row('sys','🎵','شغّلت النشيد', e.rate&&e.rate<1? h('span',{class:'muted'},' (بطيء)'):'');
-    case 'khat':  return row('ok','✍️','كتبت بخطها', h('span',{class:'muted'}, ` · التقييم ${e.score||0}/100`));
+    case 'khat':  return row('ok','✍️','كتبت بخطها', h('span',{class:'muted'}, e.ink? ` · ${e.pen?'بالقلم':'بالإصبع'} · بانتظار تقييمك` : ` · التقييم ${e.score||0}/100`));
     case 'rec':   return row('ok','🎙️','سجّلت صوتها', e.ms? h('span',{class:'muted'}, ` · ${fmtMs(e.ms)}`):'');
     case 'station': return row('done','🏁','أكملت ', name(e.s), h('span',{class:'muted'}, e.pending? ' · ⏳ بانتظار اعتمادك' : ` · ${starsTxt(e.stars||0)} · دقة ${e.acc||0}٪ · ${fmtMs(e.ms||0)}`));
     default: return null;
@@ -3400,8 +3761,8 @@ function tabProgress(){
   const p=Progress.ensure(); Child.ensure();
   const unitRows=CONTENT.units.map(u=>h('tr',{}, h('td',{}, u.icon,' ',u.title), h('td',{class:'num'}, `${lessonStars(u.lessons[0])}/${STATION_DEFS.length*3}`), h('td',{class:'num'}, `${lessonStars(u.lessons[1])}/${STATION_DEFS.length*3}`), h('td',{class:'num'}, starsTxt(Progress.stars(u.key+'/boss'))), h('td',{class:'num'}, `${unitStars(u)}/${unitMax(u)}`)));
   const lessonDetail=CONTENT.units.flatMap(u=>u.lessons.map(l=>h('div',{class:'card'}, h('h3',{}, l.emoji,' ',l.title), h('div',{class:'row', style:'gap:6px'}, ...STATION_DEFS.map(d=>{ const st=Progress.stars(`${l.key}/${d.key}`); return h('span',{class:'pill '+(st===3?'ok':st===2?'warn':st===1?'bad':''), title:d.title}, d.icon,' ',st?starsTxt(st):'—'); })))));
-  const skills=Object.entries(p.skills||{}).map(([k,s])=>({k, acc:s.total?Math.round(100*s.ok/s.total):0, level:s.level||2, total:s.total})).sort((a,b)=>a.acc-b.acc);
-  const bars=skills.length? skills.map(s=>h('div',{class:'bar'}, h('span',{}, skillName(s.k), h('span',{class:'tiny'}, ` · مستوى ${s.level}`)), h('div',{class:'trk'}, h('i',{class: s.acc>=80?'':s.acc>=60?'mid':'low', style:`width:${s.acc}%`})), h('span',{class:'pct'}, `${s.acc}%`))) : [h('div',{class:'empty'},'ما فيه بيانات مهارات بعد.')];
+  const skills=Object.entries(p.skills||{}).map(([k,s])=>({k, acc:s.total?Math.round(100*s.ok/s.total):0, level:s.level||2, total:s.total, ok:s.ok||0, help:s.help||0, shown:s.shown||0})).sort((a,b)=>a.acc-b.acc);
+  const bars=skills.length? skills.map(s=>h('div',{class:'bar'}, h('span',{}, skillName(s.k), h('span',{class:'tiny'}, ` · مستقلة ${s.ok} · بمساعدة ${s.help} · كُشف ${s.shown}${s.total-s.ok-s.help-s.shown>0? ' · قديمة غير مصنّفة '+(s.total-s.ok-s.help-s.shown):''}`)), h('div',{class:'trk'}, h('i',{class: s.acc>=80?'':s.acc>=60?'mid':'low', style:`width:${s.acc}%`})), h('span',{class:'pct'}, `${s.acc}%`))) : [h('div',{class:'empty'},'ما فيه بيانات مهارات بعد.')];
   const rd=(p.reading||[]).slice(-8);
   const rdCols=rd.length? h('div',{class:'cols'}, ...rd.map(r=>{ const mx=Math.max(...rd.map(x=>x.wpm||1),1); return h('div',{class:'col'}, h('i',{style:`height:${Math.max(3,Math.round(100*(r.wpm||0)/mx))}%`, title:`${r.wpm} ك/د`}), h('span',{}, r.wpm||0)); })) : h('div',{class:'empty'},'ما فيه قراءات مسجّلة بعد.');
   const hw=(S.child.handwriting||[]).slice(0,12);
@@ -3409,10 +3770,11 @@ function tabProgress(){
   return [
     h('div',{class:'kpis'}, h('div',{class:'kpi'}, h('div',{class:'v'}, p.totalStars||0), h('div',{class:'l'}, `نجمة من ${TOTAL_MAX()}`)), h('div',{class:'kpi'}, h('div',{class:'v'}, (p.streak&&p.streak.days)||0), h('div',{class:'l'},'أيام متتالية')), h('div',{class:'kpi'}, h('div',{class:'v'}, Object.values(p.minutesByDay||{}).reduce((a,b)=>a+b,0).toFixed(0)), h('div',{class:'l'},'دقيقة إجمالاً'))),
     h('div',{class:'card'}, h('h3',{},'الوحدات'), h('div',{style:'overflow-x:auto'}, h('table',{class:'table'}, h('thead',{}, h('tr',{}, h('th',{},'الوحدة'), h('th',{},'درس ١'), h('th',{},'درس ٢'), h('th',{},'التحدي'), h('th',{},'المجموع'))), h('tbody',{}, ...unitRows)))),
-    h('div',{class:'card'}, h('h3',{},'إتقان المهارات (الدقة التراكمية)'), h('div',{class:'bars'}, ...bars), h('p',{class:'tiny'},'المستوى يتغير تلقائياً: ٣ = أسئلة أصعب وخيارات أكثر، ١ = خياران فقط ومساعدة أكثر.')),
+    h('div',{class:'card'}, h('h3',{},'إتقان المهارات (نسبة الإجابات المستقلة فقط)'), h('div',{class:'bars'}, ...bars), h('p',{class:'tiny'},'النسبة = الإجابات الصحيحة من أول محاولة بلا مساعدة ÷ كل المحاولات. «بمساعدة» = بعد خطأ أو تلميح أو تدريب بحروف/كلمات جاهزة. «كُشف» = ظهر الجواب بعد خطأين؛ لا يُحسب إتقانًا. الإملاء والتعبير والخط والقراءة تُقاس من تقييمك لكتابتها بالقلم وتسجيلها: ٣ نجوم = مستقلة، نجمتان = بمساعدة، نجمة = تحتاج إعادة. تنبيه: خيار صحيح من أول مرة قد يكون تخمينًا؛ اللعبة لا تستطيع تمييزه.')),
     h('div',{class:'card'}, h('h3',{},'سرعة القراءة (كلمة/دقيقة) — آخر ٨ قراءات'), rdCols, h('p',{class:'tiny'}, rd.length? `آخر تقييم منك: ${rd.filter(r=>r.rating).slice(-1).map(r=>starsTxt(r.rating))[0]||'—'}`:'')),
     h('div',{class:'card'}, h('h3',{},'🎙️ تسجيلات صوتها'), h('p',{class:'tiny', style:'margin-bottom:6px'},'كل قراءة أو نشيد أو جواب شفهي سجّلته داخل اللعبة.'), recordingsGallery(12)),
-    h('div',{class:'card'}, h('h3',{},'🖌️ معرض الخط'), gallery),
+    h('div',{class:'card'}, h('h3',{},'✍️ كتابتها بالقلم'), h('p',{class:'tiny', style:'margin-bottom:6px'},'كل ورقة كتبتها داخل اللعبة، مرتبطة بالمحطة وصفحة الكتاب. اضغط لعرضها.'), worksGallery(20)),
+    hw.length? h('div',{class:'card'}, h('h3',{},'🖌️ صور قديمة (تتبّع وتلوين)'), gallery):null,
     h('h3',{},'تفاصيل المحطات لكل درس'), ...lessonDetail
   ];
 }
@@ -3433,13 +3795,14 @@ function tabMistakes(){
 function tabApprovals(){
   Child.ensure(); Parent.ensure();
   const pend=S.child.pending.filter(p=>p.status==='pending' && !S.parent.ratings[p.id] && !S.parent.taskConfirms[p.id]);
-  const rated=S.child.pending.filter(p=>p.status!=='pending' || S.parent.ratings[p.id] || S.parent.taskConfirms[p.id]).slice(0,10);
+  const rated=S.child.pending.filter(p=>p.status!=='removed').filter(p=>p.status!=='pending' || S.parent.ratings[p.id] || S.parent.taskConfirms[p.id]).slice(0,10);
   const rateBtns=(p)=>h('div',{class:'row'}, ...[3,2,1].map(n=>h('button',{class:'btn btn-sm '+(n===3?'btn-green':n===2?'btn-sky':''), onclick:async()=>{ S.parent.ratings[p.id]={rating:n, ts:Date.now()}; await Parent.save(); Log.ev({k:'parent_rate', id:p.id, rating:n}); toast('تم الاعتماد ✅'); renderParent('approvals'); }}, starsTxt(n))));
   const confirmBtn=(p)=>h('button',{class:'btn btn-sm btn-green', onclick:async()=>{ S.parent.taskConfirms[p.id]=Date.now(); await Parent.save(); toast('اعتمدت المهمة ✅'); renderParent('approvals'); }},'✅ أعتمد المهمة (٣ نجوم)');
-  const card=(p, done)=>h('div',{class:'card'}, h('div',{class:'row between'}, h('b',{}, p.type==='read'?'📖 قراءة جهرية': p.type==='nasheed'?'🎵 تسميع نشيد': p.type==='hw'?'📓 واجب منزلي من الكتاب':'🏡 مهمة واقعية'), h('span',{class:'tiny'}, `${fmtDay(dayKey(p.ts))} ${fmtClock(p.ts)}`)),
+  const card=(p, done)=>h('div',{class:'card'}, h('div',{class:'row between'}, h('b',{}, p.type==='ink'?'✍️ كتابة بالقلم — '+(p.title||''): p.type==='read'?'📖 قراءة جهرية': p.type==='nasheed'?'🎵 تسميع نشيد': p.type==='hw'?'📓 واجب منزلي من الكتاب':'🏡 مهمة واقعية'), h('span',{class:'tiny'}, `${fmtDay(dayKey(p.ts))} ${fmtClock(p.ts)}`)),
     h('p',{class:'small'}, stationName(p.station), p.station? h('span',{class:'tiny'}, ' · 📖 ', srcOf(p.station)):null), p.text? h('p',{class:'small'}, p.text):null,
     p.type==='read'? h('p',{class:'small'}, `الوقت ${fmtMs(p.ms||0)} · ${p.wpm||0} كلمة/دقيقة · ${p.words||0} كلمة`, p.hard&&p.hard.length? h('span',{}, ` · كلمات سمعتها: ${p.hard.join('، ')}`):null):null,
-    p.audio? h('div',{class:'stack', style:'gap:4px'}, h('p',{class:'tiny'},'🎙️ تسجيل صوتها — اسمعه ثم قيّم:'), audioEl(p.audio)) : (p.type==='read'||p.type==='nasheed')? h('p',{class:'tiny'},'(بدون تسجيل صوتي — اطلب منها تقرأ لك)'):null,
+    p.type==='ink'? h('div',{class:'stack work-card', style:'gap:4px'}, h('p',{class:'tiny'}, p.pen?'✏️ كتبت بقلم الآيباد':'☝️ كتبت بالإصبع (بدون قلم)', ` · ${p.n||0} خطًّا`), (p.inkGone||isDeleted(p.ink))? h('p',{class:'tiny'},'(حُذفت الكتابة)') : Ink.viewer(p.ink), p.key? h('p',{class:'small', style:'white-space:pre-line;background:var(--ok-bg,#EAF7E8);border-radius:10px;padding:6px 10px'}, h('b',{},'مفتاح التصحيح: '), p.key):null, done?null:h('p',{class:'tiny'},'٣ نجوم = صحيحة ومستقلة · نجمتان = أخطاء بسيطة · نجمة = تحتاج إعادة')) :
+    p.audio && !isDeleted(p.audio)? h('div',{class:'stack', style:'gap:4px'}, h('p',{class:'tiny'},'🎙️ تسجيل صوتها — اسمعه ثم قيّم:'), audioEl(p.audio)) : (p.type==='read'||p.type==='nasheed')? h('p',{class:'tiny'},'(بدون تسجيل صوتي — اطلب منها تقرأ لك)'):null,
     done ? h('span',{class:'pill ok'}, 'تم: ', starsTxt((S.parent.ratings[p.id]||{}).rating || p.rating || 3)) : (p.task? h('div',{class:'stack'}, h('p',{class:'tiny'}, p.type==='hw'?'شوف دفترها وتأكد أنها حلّت الواجب، ثم اعتمد:':'تأكد أنها نفّذت المهمة، ثم اعتمد:'), confirmBtn(p)) : h('div',{class:'stack'}, h('p',{class:'tiny'}, p.audio? 'قيّم قراءتها بعد الاستماع:' : p.type==='read'?'اطلب منها تقرأ لك النص نفسه من اللعبة ثم قيّم:':'اطلب منها تنشد لك ثم قيّم:'), rateBtns(p))));
   return [
     h('h3',{}, `بانتظار اعتمادك (${pend.length})`),
@@ -3473,6 +3836,8 @@ function tabSettings(){
   const name=h('input',{id:'s-name', value:s.childName||''}); const goal=h('input',{id:'s-goal', type:'number', min:5, max:60, value:s.dailyGoalMin||15});
   const rw=h('input',{id:'s-rw', value:(s.reward||{}).name||''}); const rws=h('input',{id:'s-rws', type:'number', min:10, max:500, value:(s.reward||{}).stars||60});
   const remind=h('input',{id:'s-remind', type:'checkbox', checked: s.remindPrev!==false, style:'width:auto'});
+  const keep=h('select',{id:'s-keep'}, ...[[0,'بدون حذف تلقائي (آخر ٤٠ تسجيلًا و١٥٠ ورقة)'],[30,'٣٠ يومًا'],[90,'٩٠ يومًا'],[180,'١٨٠ يومًا']].map(([v,t])=>h('option',{value:v, selected:(s.retentionDays||0)===v}, t)));
+  Child.ensure(); const nRec=S.child.recordings.filter(r=>!isDeleted(r.id)).length, nWk=S.child.works.filter(w=>!isDeleted(w.id)).length, nImg=S.child.handwriting.filter(w=>!isDeleted(w.id)).length;
   return [
     h('div',{class:'card stack'}, h('h3',{},'الإعدادات'),
       h('div',{class:'field'}, h('label',{for:'s-name'},'اسم البنت'), name),
@@ -3480,6 +3845,12 @@ function tabSettings(){
       h('div',{class:'field'}, h('label',{for:'s-rw'},'المكافأة وعدد النجوم'), rw, rws),
       h('label',{class:'row', style:'gap:8px'}, remind, ' تذكير لطيف إذا فتحت درساً أو وحدة قبل إكمال السابق (لا شيء مقفل، وهدف اليوم في الخطة يُفتح بدون تذكير)'),
       h('button',{class:'btn btn-primary', onclick:async()=>{ S.settings=Object.assign({},s,{childName:name.value.trim()||s.childName, dailyGoalMin:clamp(parseInt(goal.value)||15,5,60), reward:{name:rw.value.trim(), stars:clamp(parseInt(rws.value)||60,10,500)}, remindPrev:remind.checked}); await Store.set('settings', S.settings); toast('حُفظت الإعدادات ✅'); }},'حفظ')),
+    h('div',{class:'card stack'}, h('h3',{},'🛡️ بيانات سديم المحفوظة'),
+      h('p',{class:'small'}, `المحفوظ الآن: ${nRec} تسجيلًا صوتيًا · ${nWk} ورقة كتابة · ${nImg} صورة قديمة.`),
+      h('div',{class:'field'}, h('label',{for:'s-keep'},'مدة الاحتفاظ بالتسجيلات والكتابة'), keep),
+      h('button',{class:'btn btn-sm', onclick:async()=>{ S.settings=Object.assign({}, S.settings, {retentionDays:parseInt(keep.value)||0}); await Store.set('settings', S.settings); toast('حُفظت مدة الاحتفاظ ✅ — تُطبَّق عند فتح اللعبة على جهازها'); }},'حفظ المدة'),
+      h('p',{class:'tiny'},'الحذف المفرد: من «التقدم» ← تسجيلات صوتها / كتابتها بالقلم، زر 🗑️ بجانب كل عنصر.'),
+      h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:()=>openSheet(h('div',{class:'stack'}, h('h3',{},'حذف كل التسجيلات والكتابة'), h('p',{class:'small'},'يُحذف نهائيًا كل ما سُجّل وكُتب حتى هذه اللحظة (النجوم والتقدم لا تتأثر). لا يمكن التراجع.'), h('div',{class:'row'}, h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:async()=>{ closeSheet(); Parent.ensure(); S.parent.deletes=S.parent.deletes||{}; S.parent.deletes.__all=Date.now(); await Parent.save(); const all=[...S.child.recordings.map(r=>['rec',r.id]), ...S.child.handwriting.map(r=>['rec',r.id]), ...S.child.works.map(w=>['ink',w.id])]; for(const [k,id] of all){ S.parent.deletes[id]=Date.now(); try{ if(k==='ink') await Works.remove(id); else await Blobs.delete(id); }catch(e){} } await Parent.save(); toast('حُذف الكل ✅'); renderParent('settings'); }},'🗑️ احذف الكل'), h('button',{class:'btn btn-sm', onclick:closeSheet},'إلغاء'))))},'🗑️ حذف كل التسجيلات والكتابة')),
     h('div',{class:'card stack'}, h('h3',{},'تغيير الرمز السري'), h('button',{class:'btn', onclick:()=>askPin('أدخل الرمز الجديد', async(hash)=>{ S.settings.pinHash=hash; await Store.set('settings', S.settings); toast('تغيّر الرمز ✅'); }, {setup:true})},'🔐 رمز جديد')),
     (S.blobMode==='fs' || S.fb) ? h('div',{class:'card stack'}, h('h3',{},'🔗 ربط الأجهزة (رمز العائلة)'),
       Family.code() && Family.code()!=='LOCAL' ? h('div',{class:'stack'}, h('p',{class:'small'},'رمز العائلة السري لهذا الجهاز:'), h('p',{class:'ltr', style:'font-size:1.5rem;font-weight:800;letter-spacing:3px;text-align:center'}, Family.code()),
@@ -3505,6 +3876,41 @@ function renderParentLock(){
     h('div',{class:'card sand stack'}, h('h3',{},'🎮 رابط اللعبة (لجهاز البنت)'), h('p',{class:'ltr tiny', style:'word-break:break-all'}, Family.childLink()),
       h('div',{class:'row'}, h('button',{class:'btn btn-sm', onclick:async()=>{ try{ await navigator.clipboard.writeText(Family.childLink()); toast('نُسخ رابط اللعبة ✅'); }catch(e){ toast('انسخه يدويًا'); } }},'📋 نسخ'), h('a',{class:'btn btn-sm', href:Family.childLink(), target:'_blank', rel:'noopener'},'↗ فتح اللعبة')))
   ));
+}
+
+/* ---------- مراجعة النصوص والصوت (يراجعها بابا أو معلمة؛ لم تُراجَع آليًا للنطق) ---------- */
+function reviewItems(){
+  const out=[]; const add=(kind, text, sub)=>{ if(text) out.push({kind, text:N(text), sub:sub||''}); };
+  for (const [t] of Object.entries(typeof AUDIO==='undefined'?{}:AUDIO)) add(/\s/.test(t.trim())?'sent':'word', t);
+  const qa=(where, it)=>{ if(!it) return; if(it.t==='mcq'||it.opts) add('qa', it.q, 'الجواب: '+N(it.opts[it.a])+' — '+where); else if(it.t==='order'||it.answer) add('qa', it.q||'ترتيب', 'الجواب: '+N(it.answer||'')+' — '+where); };
+  for (const u of CONTENT.units){ (u.warmup.items||[]).forEach(i=>qa(u.title,i)); (u.listening.qs||[]).forEach(i=>qa(u.title,i));
+    for (const l of u.lessons){ (l.quiz||[]).forEach(i=>qa(l.title,i)); for(const k of ['style','transform']) ((l[k]||{}).items||[]).forEach(i=>qa(l.title,i)); (l.express||[]).forEach(i=>qa(l.title,i)); ((l.phon||{}).items||[]).forEach(i=>add('qa', (l.phon.q||'')+' ('+i.w+')', 'الجواب: '+N(i.opts[i.a])+' — '+N(l.title))); (l.vocab||[]).forEach(v=>add('qa', v.w, 'المعنى: '+N(v.m)+(v.ant?' · الضد: '+N(v.ant):'')+' · النوع: '+v.type+' — '+N(l.title))); } }
+  for (const s2 of CONTENT.library) (s2.qs||[]).forEach(i=>qa(s2.title,i));
+  return out;
+}
+function revId(it){ let x=5381; const t=it.kind[0]+it.text+it.sub; for(let i=0;i<t.length;i++) x=((x<<5)+x+t.charCodeAt(i))>>>0; return x.toString(36); }
+let _revFilter='sent';
+function tabReview(){
+  Parent.ensure(); const R=S.parent.review=S.parent.review||{ok:{}, bad:{}};
+  const all=reviewItems(); const cnt=k=>all.filter(i=>i.kind===k).length; const done=all.filter(i=>R.ok[revId(i)]||R.bad[revId(i)]).length; const bad=all.filter(i=>R.bad[revId(i)]);
+  const filters=[['sent',`🔊 جمل (${cnt('sent')})`],['word',`🔊 كلمات (${cnt('word')})`],['qa',`❓ أسئلة وإجابات (${cnt('qa')})`],['bad',`✗ المعلَّم خطأ (${bad.length})`],['todo','لم تُراجَع']];
+  const list=all.filter(i=> _revFilter==='bad'? R.bad[revId(i)] : _revFilter==='todo'? !(R.ok[revId(i)]||R.bad[revId(i)]) : i.kind===_revFilter).slice(0,150);
+  const save=()=>Parent.save();
+  const rowEl=it=>{ const id=revId(it); const st=()=> R.bad[id]?'bad':R.ok[id]?'ok':''; const el=h('div',{class:'card', style:'padding:8px 12px'});
+    const draw=()=>{ el.style.borderColor= st()==='bad'?'var(--bad)':st()==='ok'?'var(--ok,#2E7D32)':''; };
+    const play= it.kind!=='qa' ? (()=>{ const b=h('button',{class:'btn btn-sm', onclick:()=>Say.speakUI(b, it.text)},'▶️ اسمع'); return b; })() : null;
+    const note=h('input',{placeholder:'ما الخطأ؟ (اختياري)', value:(R.bad[id]&&R.bad[id].note)||'', style:'flex:1;min-width:120px', onchange:e=>{ if(R.bad[id]){ R.bad[id].note=e.target.value; save(); } }});
+    el.append(h('p',{style:'font-size:1.25rem;font-weight:700'}, it.text), it.sub? h('p',{class:'small'}, it.sub):'', h('div',{class:'row'}, ...kids(play,
+      h('button',{class:'btn btn-sm btn-green', onclick:()=>{ delete R.bad[id]; R.ok[id]=1; save(); draw(); }},'✓ صحيح'),
+      h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:()=>{ delete R.ok[id]; R.bad[id]={text:it.text, sub:it.sub, kind:it.kind, note:note.value||''}; save(); draw(); }},'✗ خطأ'), note)));
+    draw(); return el; };
+  return [
+    h('div',{class:'card stack'}, h('p',{class:'small'},`راجعت ${done} من ${all.length}. المقاطع الصوتية والنصوص لم يراجعها إنسان بعد: اسمع المقطع وقارنه بالنص المشكول، واقرأ السؤال وجوابه، وعلّم ✗ على أي خطأ في التشكيل أو النطق أو الجواب.`),
+      h('div',{class:'tabs'}, ...filters.map(([k,t])=>h('button',{class:'tab'+(k===_revFilter?' on':''), onclick:()=>{ _revFilter=k; renderParent('review'); }}, t))),
+      bad.length? h('button',{class:'btn btn-sm btn-sky', onclick:async()=>{ const txt=bad.map(i=>{ const b=R.bad[revId(i)]; return `[${i.kind==='qa'?'سؤال':'صوت'}] ${i.text}${i.sub?' | '+i.sub:''}${b.note?' | الملاحظة: '+b.note:''}`; }).join('\n'); try{ await navigator.clipboard.writeText(txt); toast('نُسخت قائمة الأخطاء ✅ — أرسلها للتصحيح'); }catch(e){ toast('تعذّر النسخ'); } }},`📋 نسخ قائمة الأخطاء (${bad.length})`):null),
+    ...(list.length? list.map(rowEl) : [h('div',{class:'empty'},'لا شيء في هذا القسم.')]),
+    list.length===150? h('p',{class:'tiny'},'يُعرض ١٥٠ عنصرًا في المرة. بعد مراجعتها اختر «لم تُراجَع» لعرض الباقي.'):null
+  ];
 }
 
 /* ===================== الإقلاع ===================== */
