@@ -1925,7 +1925,7 @@ const Progress = {
   stars(path){ this.ensure(); return S.progress.stars[path]||0; },
   setStars(path, n, extra){
     this.ensure(); const p=S.progress; const old=p.stars[path]||0; if(n>old) p.stars[path]=n; else if(old===0 && n===0) p.stars[path]=0;
-    if (extra && extra.acc!==undefined){ const b=p.best[path]||{}; if(extra.acc>(b.acc||0)) b.acc=extra.acc; if(!b.ms||extra.ms<b.ms) b.ms=extra.ms; b.last=Date.now(); b.plays=(b.plays||0)+1; p.best[path]=b; }
+    if (extra && extra.acc!==undefined){ const b=p.best[path]||{}; if(extra.acc>(b.acc||0)) b.acc=extra.acc; if(!b.ms||extra.ms<b.ms) b.ms=extra.ms; b.last=Math.max(b.last||0, extra.at||Date.now()); b.plays=(b.plays||0)+1; p.best[path]=b; }
     p.totalStars = Object.values(p.stars).reduce((a,b)=>a+b,0);
     p.lastPlayed=Date.now(); this.touchStreak();
     return this.save();
@@ -2000,6 +2000,7 @@ const Parent = {
 };
 
 /* تطبيق تقييمات بابا القادمة من اللوحة على تقدم الطفلة (الكاتب الوحيد للتقدم هو جهاز الطفلة) */
+/* وقت الإنجاز = وقت إرسالها (at) لا وقت التقييم، حتى لا تنطفئ لمبة اليوم بعمل أمس */
 async function applyParentRatings(){
   if(!S.parent || !S.child) return; Parent.ensure(); Child.ensure();
   let changed=false, prog=false;
@@ -2007,13 +2008,13 @@ async function applyParentRatings(){
     const r = S.parent.ratings[p.id];
     if (r && p.status==='pending'){
       p.status='rated'; p.rating=r.rating; p.ratedAt=r.ts; changed=true;
-      if (p.station){ Progress.setStars(p.station, r.rating, {acc:r.rating/3, ms:p.ms||0}); prog=true; Log.ev({k:'rated_by_parent', s:p.station, rating:r.rating}); }
+      if (p.station){ Progress.setStars(p.station, r.rating, {acc:r.rating/3, ms:p.ms||0, at:p.ts}); prog=true; Log.ev({k:'rated_by_parent', s:p.station, rating:r.rating}); }
       /* المهارات التي تُقاس بالكتابة المستقلة أو القراءة المسجّلة: تقييم بابا هو القياس */
       const sk = p.skill || (p.type==='read' ? 'read' : p.type==='nasheed' ? 'nasheed' : '');
       if (sk){ Progress.recordSkill(sk, r.rating===3?1:0, 1, r.rating===2?1:0, r.rating<=1?1:0); prog=true; }
     }
     const tc = p.task && S.parent.taskConfirms[p.id];
-    if (tc && p.status==='pending'){ p.status='rated'; p.rating=3; changed=true; if(p.station){ Progress.setStars(p.station,3,{acc:1,ms:0}); prog=true; } }
+    if (tc && p.status==='pending'){ p.status='rated'; p.rating=3; changed=true; if(p.station){ Progress.setStars(p.station,3,{acc:1,ms:0,at:p.ts}); prog=true; } }
   }
   if (applyParentDeletes()) changed=true;
   if (changed) await Child.save();
@@ -2072,7 +2073,7 @@ function pageChip(path){ const p=pageOf(path); return h('span',{class:'pg'+(p?''
 
 /* ===================== لمبة درس اليوم ===================== */
 function todayTargets(){
-  Parent.ensure(); const wp=S.parent.weekPlan; if(!wp||!wp.days) return [];
+  const wp=effectivePlan(); if(!wp||!wp.days) return [];
   const dk=todayPlanKey(); if(dk==='fri'||dk==='sat') return [];
   return (wp.days[dk]||[]).map(it=>kPlanPath(it.path)).filter(Boolean);
 }
@@ -2083,8 +2084,7 @@ function lampState(prefix, {parentOk=false}={}){
   const isUnit = /^u\d$/.test(prefix);
   const hits=ts.filter(p=> p===prefix || p.startsWith(prefix+'/') || (isUnit && unitOfPath(p)===prefix) || (parentOk && prefix.startsWith(p+'/')));
   if(!hits.length) return null;
-  const done = p => { if(targetDoneToday(p)) return true; const f=findLesson(p); if(f && !p.includes('/')) return lessonStations(f.lesson).some(d=>targetDoneToday(`${p}/${d.key}`)); if(/^u\d\/task/.test(p)){ const u=CONTENT.units.find(x=>x.key===p.split('/')[0]); return unitTasks(u).some(t=>targetDoneToday(`${u.key}/task/${t.key}`)); } return false; };
-  return hits.every(done) ? 'done' : 'on';
+  return hits.every(planDoneToday) ? 'done' : 'on';
 }
 function lampEl(state, {small=false}={}){
   if(!state) return null;
@@ -2818,7 +2818,16 @@ function runByPath(path){
 }
 const PLAN_DAYS=[['sun','الأحد'],['mon','الاثنين'],['tue','الثلاثاء'],['wed','الأربعاء'],['thu','الخميس']];
 function todayPlanKey(){ return ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()]; }
-function targetDoneToday(path){ const b=Progress.ensure().best[path]; return !!(b && b.last && dayKey(b.last)===dayKey()); }
+/* أُنجزت اليوم: لعبتها وأخذت نجومها اليوم، أو أرسلتها لبابا اليوم (اللمبة لا تنتظر تقييم بابا حتى تتحول إلى ✅) */
+function sentToday(path){ const L=(S.child && S.child.pending)||[]; const t=dayKey(); return L.some(p=>p.station===path && p.status!=='removed' && p.ts && dayKey(p.ts)===t); }
+function targetDoneToday(path){ const b=Progress.ensure().best[path]; return !!(b && b.last && dayKey(b.last)===dayKey()) || sentToday(path); }
+/* هدف الخطة قد يكون محطة، أو درسًا كاملًا (أي محطة منه)، أو «مهمة الوحدة» (أي مهمة منها) */
+function planDoneToday(p){
+  if (!p) return false; if (targetDoneToday(p)) return true;
+  if (!p.includes('/')){ const f=findLesson(p); return !!f && lessonStations(f.lesson).some(d=>targetDoneToday(`${p}/${d.key}`)); }
+  if (/^u\d\/task$/.test(p)){ const u=CONTENT.units.find(x=>x.key===p.split('/')[0]); return !!u && unitTasks(u).some(t=>targetDoneToday(`${u.key}/task/${t.key}`)); }
+  return false;
+}
 /* اسم بسيط ومشكول للمحطة يناسب طفلة في الصف الثاني (يظهر للبنت بدل مصطلحات المدرسة) */
 function kidLabel(path){
   const [a,b]=path.split('/');
@@ -2834,15 +2843,15 @@ function kidLabel(path){
   return path;
 }
 function weekPlanBubble(){
-  Parent.ensure(); const wp=S.parent.weekPlan; if(!wp || !wp.days) return null;
+  const wp=effectivePlan(); if(!wp || !wp.days) return null;
   let dk=todayPlanKey(); let label='الْيَوْمَ';
   if (dk==='fri'||dk==='sat'){ dk='sun'; label='يَوْمَ الْأَحَدِ'; }
   const items=(wp.days[dk]||[]).map(it=>Object.assign({}, it, {path:kPlanPath(it.path)})); const note=(wp.notes||{})[dk];
   if (!items.length && !note) return null;
-  const allDone = items.length && items.every(it=>targetDoneToday(it.path));
+  const allDone = items.length && items.every(it=>planDoneToday(it.path));
   return h('div',{class:'card sand plan'+(allDone?' done':'')}, h('h3',{}, allDone?'✅ ':'💡 ', 'مُهِمَّاتِي ', label, allDone? ' — خَلَصْتِ! 🎉':''),
     note? h('p',{class:'small', style:'font-size:1.05rem'}, note):null,
-    h('div',{class:'stack', style:'gap:8px;margin-top:6px'}, ...items.map(it=>{ const done=targetDoneToday(it.path); return h('div',{class:'row between plan-it'+(done?' done':''), style:'background:var(--surface);border-radius:14px;padding:8px 12px;border:2px solid var(--line)'}, h('span',{style:'flex:1;min-width:0;font-weight:700;font-size:1.05rem'}, done?'✅ ':'💡 ', it.kid||kidLabel(it.path), h('span',{class:'tiny', style:'display:block;font-weight:500'}, '📖 ', srcOf(it.path))), h('button',{class:'btn btn-sm '+(done?'':'btn-primary'), onclick:()=>{ Log.ev({k:'plan_open', s:it.path}); runByPath(it.path); }}, done?'أُعِيدُ':'ابْدَئِي')); })));
+    h('div',{class:'stack', style:'gap:8px;margin-top:6px'}, ...items.map(it=>{ const done=planDoneToday(it.path); return h('div',{class:'row between plan-it'+(done?' done':''), style:'background:var(--surface);border-radius:14px;padding:8px 12px;border:2px solid var(--line)'}, h('span',{style:'flex:1;min-width:0;font-weight:700;font-size:1.05rem'}, done?'✅ ':'💡 ', it.kid||kidLabel(it.path), h('span',{class:'tiny', style:'display:block;font-weight:500'}, '📖 ', srcOf(it.path))), h('button',{class:'btn btn-sm '+(done?'':'btn-primary'), onclick:()=>{ Log.ev({k:'plan_open', s:it.path}); runByPath(it.path); }}, done?'أُعِيدُ':'ابْدَئِي')); })));
 }
 function renderHome(){
   const p=Progress.ensure(); const sett=S.settings||DEFAULT_SETTINGS;
@@ -3832,7 +3841,9 @@ function kIsX(path){
 }
 /* أهداف خطة بابا المحفوظة بمسارات اللعبة القديمة تُفتح على مقابلها من الكتاب */
 function kPlanPath(path){
-  if(!kOn() || !path) return path; const [a,b]=String(path).split('/'); if(!b || b.startsWith('k-')) return path;
+  if(!kOn() || !path) return path; const [a,b,c]=String(path).split('/'); if(!b || b.startsWith('k-')) return path;
+  /* «مهمة الوحدة» العامة ← «أنجز مشروعي» من الكتاب */
+  if(b==='task') return (!c && kUnit(a) && EXTRA.projects[a])? `${a}/task/project` : path;
   if(a==='lib'){ return (kLibDefs()||[]).some(d=>d.key==='k-'+b)? `lib/k-${b}` : path; }
   const L=kLesson(a); if(L) return L.stations.some(d=>d.key==='k-'+b)? `${a}/k-${b}` : path;
   const U=kUnit(a); if(U){ const d=U.blocks.find(x=>x.replaces===b); return d? `${a}/${d.key}` : path; }
@@ -4139,7 +4150,9 @@ const PSECTIONS=[
 const PTABS=PSECTIONS.map(x=>[x.key,x.title]);
 function pendingList(){ Child.ensure(); Parent.ensure(); return S.child.pending.filter(p=>p.status==='pending' && !S.parent.ratings[p.id] && !S.parent.taskConfirms[p.id]); }
 function unreadNotes(){ Child.ensure(); Parent.ensure(); const seen=S.parent.seenNotes||{}; return S.child.notes.filter(n=>!seen[n.id]); }
-function todayPlanStatus(){ Parent.ensure(); const wp=S.parent.weekPlan; const items=(wp && wp.days && wp.days[todayPlanKey()])||[]; return {total:items.length, done:items.filter(it=>targetDoneToday(kPlanPath(it.path))).length, items}; }
+function todayPlanStatus(){ const wp=effectivePlan(); const items=(wp && wp.days && wp.days[todayPlanKey()])||[]; return {total:items.length, done:items.filter(it=>planDoneToday(kPlanPath(it.path))).length, items}; }
+/* حالة هدف من خطة اليوم في لوحة بابا: 'wait' أرسلته وينتظر تقييمك، 'done' أُنجز، '' لم يُنجز بعد */
+function planItemState(kp){ if(!planDoneToday(kp)) return ''; return pendingList().some(p=>p.station && (p.station===kp || p.station.startsWith(kp+'/'))) ? 'wait' : 'done'; }
 /* خطة الأسبوع 12 (8–12 نوفمبر 2026) كما وردت في خطة المدرسة الأسبوعية */
 const WEEK12_PRESET = {
   label:'الأسبوع 12 (8–12 نوفمبر)',
@@ -4152,6 +4165,20 @@ const WEEK12_PRESET = {
   },
   notes:{ sun:'🌟 الْيَوْمَ نُرَاجِعُ وَحْدَةَ وَطَنِي!', mon:'📚 لَا تَنْسَيْ وَاجِبَ الْمَدْرَسَةِ.', tue:'✍️ الْيَوْمَ قِرَاءَةٌ وَإِمْلَاءٌ، يَلَّا!', wed:'🌾 نَبْدَأُ عَالَمَ الْمَزْرَعَةِ!', thu:'🎵 يَوْمُ النَّشِيدِ!' }
 };
+/* خطط المدرسة المدمجة في اللعبة (من الملف الأسبوعي الذي يرسله بابا) مع تاريخ أسبوعها.
+   تتفعّل تلقائيًا في أسبوعها (ومن الجمعة التي قبله) ما لم يحفظ بابا خطة خاصة به، فتضيء اللمبة بدون أي ضغطة. */
+const PLAN_PRESETS = [ {from:'2026-11-08', to:'2026-11-12', plan:WEEK12_PRESET} ];
+function presetNow(){ const t=dayKey(), ahead=dayKey(Date.now()+2*86400000); const e=PLAN_PRESETS.find(x=> ahead>=x.from && t<=x.to); return e? e.plan : null; }
+function planHasItems(wp){ return !!(wp && wp.days && (Object.values(wp.days).some(a=>a && a.length) || Object.values(wp.notes||{}).some(Boolean))); }
+/* الخطة التي تتبعها اللمبة فعلًا: خطة بابا المحفوظة، وإلا خطة المدرسة المدمجة لهذا الأسبوع.
+   خطة محفوظة من ملف أسبوع سابق تُستبدل تلقائيًا بخطة الأسبوع الحالي؛ و«إيقاف» بابا يُحترم لذلك الأسبوع. */
+function effectivePlan(){
+  Parent.ensure(); const wp=S.parent.weekPlan; const bp=presetNow();
+  if (wp && wp.off) return (bp && wp.off!==bp.label) ? bp : null;   /* أوقفها بابا: تبقى موقوفة إلى أن تأتي خطة أسبوع جديد */
+  const own = planHasItems(wp) ? wp : null;
+  if (bp && (!own || (own.label!==bp.label && PLAN_PRESETS.some(x=>x.plan.label===own.label)))) return bp;
+  return own;
+}
 /* كل أهداف الخطة بترتيب صفحات الكتاب، مع رقم الصفحة في الاسم */
 function allTargets(){
   const out=[]; const pg=path=>{ const p=pageOf(path); return p? ` (ص ${p})` : ' (إضافي)'; };
@@ -4171,8 +4198,14 @@ function allTargets(){
   return out;
 }
 function tabPlan(){
-  Parent.ensure(); const wp = S.parent.weekPlan ? JSON.parse(JSON.stringify(S.parent.weekPlan)) : {label:'', days:{}, notes:{}};
+  Parent.ensure(); const saved=S.parent.weekPlan; const eff=effectivePlan(); const bp=presetNow(); const latest=PLAN_PRESETS[PLAN_PRESETS.length-1].plan;
+  const off=!!(saved && saved.off) && !eff; const auto=!!eff && eff===bp && eff!==saved;
+  const wp = JSON.parse(JSON.stringify(eff || (off? null : saved) || {label:'', days:{}, notes:{}})); delete wp.off;
   wp.days=wp.days||{}; wp.notes=wp.notes||{};
+  const status = auto ? h('div',{class:'card', style:'border-color:var(--green)'}, h('b',{}, '✅ خطة المدرسة لهذا الأسبوع مفعّلة تلقائيًا: ', eff.label), h('p',{class:'tiny'}, 'اللمبة تضيء للبنت كل يوم بدون ما تضغط شيئًا. إذا تبي تغيّر شيئًا عدّل تحت واضغط «حفظ الخطة».'))
+    : off ? h('div',{class:'card', style:'border-color:var(--line)'}, h('b',{}, '⏸️ الخطة موقوفة: لا توجد لمبة للبنت الآن.'), h('p',{class:'tiny'}, 'لتشغيلها: حمّل خطة المدرسة من الزر، أو أضف أهدافًا واضغط «حفظ الخطة».'))
+    : eff ? h('div',{class:'card'}, h('b',{}, '💡 الخطة الحالية: ', eff.label||'خطة خاصة بك'))
+    : h('div',{class:'card'}, h('b',{}, 'لا توجد خطة لهذا الأسبوع بعد.'), h('p',{class:'tiny'}, 'أرسل لي ملف خطة المدرسة لهذا الأسبوع وتتفعّل تلقائيًا، أو أضف الأهداف بنفسك تحت.'));
   const targets=allTargets(); const groups=[...new Set(targets.map(t=>t.group))];
   const label=h('input',{id:'p-label', value:wp.label||'', placeholder:'مثال: الأسبوع 13 (15–19 نوفمبر)'});
   const dayCards=PLAN_DAYS.map(([k,name])=>{
@@ -4185,8 +4218,9 @@ function tabPlan(){
     return h('div',{class:'card stack'}, h('h3',{}, name), list, h('div',{class:'row'}, sel, custom), h('button',{class:'btn btn-sm', onclick:()=>{ if(!sel.value) return; (wp.days[k]=wp.days[k]||[]).push({path:sel.value, label: custom.value.trim() || (targets.find(t=>t.path===sel.value)||{}).label}); custom.value=''; sel.value=''; draw(); }},'+ أضف هدفاً'), note);
   });
   return [
-    h('div',{class:'card sand'}, h('p',{class:'small'},'حدّد لكل يوم ما تريد البنت تلعبه حسب خطة المدرسة الأسبوعية. كل يوم تضيء لمبة 💡 على مكان درس اليوم: في الشاشة الرئيسية وداخل الوحدة والدرس، وتتحول إلى ✅ عند الإنجاز. أرسل لي ملف الخطة كل أسبوع وأحدّثها لك مباشرة.')),
-    h('div',{class:'row'}, h('button',{class:'btn btn-sm btn-sky', onclick:async()=>{ S.parent.weekPlan=JSON.parse(JSON.stringify(WEEK12_PRESET)); await Parent.save(); toast('حُمّلت خطة الأسبوع 12 ✅'); renderParent('plan'); }},'📄 حمّل خطة الأسبوع 12 (من ملف المدرسة)'), S.parent.weekPlan? h('button',{class:'btn btn-sm', onclick:async()=>{ S.parent.weekPlan=null; await Parent.save(); renderParent('plan'); }},'مسح الخطة'):null),
+    h('div',{class:'card sand'}, h('p',{class:'small'},'كل يوم تضيء لمبة 💡 على مكان درس اليوم حسب خطة المدرسة الأسبوعية: في الشاشة الرئيسية وداخل الوحدة والدرس، وتتحول إلى ✅ أول ما تخلّصه البنت أو ترسله لك. أرسل لي ملف الخطة كل أسبوع وأضيفها للعبة فتتفعّل تلقائيًا، وتقدر تعدّلها من هنا.')),
+    status,
+    h('div',{class:'row'}, h('button',{class:'btn btn-sm btn-sky', onclick:async()=>{ S.parent.weekPlan=JSON.parse(JSON.stringify(latest)); await Parent.save(); toast('حُمّلت خطة المدرسة ✅'); renderParent('plan'); }},'📄 حمّل خطة '+latest.label+' (من ملف المدرسة)'), eff? h('button',{class:'btn btn-sm', onclick:async()=>{ S.parent.weekPlan={off: bp? bp.label : true, label:'', days:{}, notes:{}}; await Parent.save(); toast('أُوقفت الخطة'); renderParent('plan'); }},'إيقاف الخطة (بدون لمبة)'):null),
     h('div',{class:'field'}, h('label',{for:'p-label'},'اسم الأسبوع'), label),
     ...dayCards,
     h('button',{class:'btn btn-primary', onclick:async()=>{ wp.label=label.value.trim(); S.parent.weekPlan=wp; await Parent.save(); toast('حُفظت الخطة ✅'); Log.ev({k:'plan_saved'}); }},'حفظ الخطة')
@@ -4255,7 +4289,7 @@ function tabHub(){
   const pend=pendingList(); const notes=unreadNotes(); const plan=todayPlanStatus();
   const needs=[];
   if (pend.length) needs.push(h('div',{class:'need'}, h('span',{class:'need-ic'},'⏳'), h('div',{class:'need-b'}, h('b',{}, `${pend.length} ${pend.length===1?'شيء ينتظر':'أشياء تنتظر'} اعتمادك`), h('span',{class:'tiny'}, pend.slice(0,3).map(x=>x.type==='ink'?'كتابة بالقلم':x.type==='read'?'قراءة':x.type==='nasheed'?'نشيد':x.type==='hw'?'واجب':'مهمة').join('، '))), h('button',{class:'btn btn-sm btn-green', onclick:()=>renderParent('approvals')},'اعتمد الآن')));
-  if (plan.total) needs.push(h('div',{class:'need'}, h('span',{class:'need-ic'}, plan.done===plan.total?'✅':'💡'), h('div',{class:'need-b'}, h('b',{}, `خطة اليوم: ${plan.done} من ${plan.total}`), h('span',{class:'tiny'}, plan.done===plan.total? 'أنجزت كل مهمات اليوم 🎉' : 'الباقي: '+plan.items.filter(it=>!targetDoneToday(it.path)).map(it=>it.label||stationName(it.path)).join('، '))), h('button',{class:'btn btn-sm', onclick:()=>renderParent('plan')},'الخطة')));
+  if (plan.total) needs.push(h('div',{class:'need'}, h('span',{class:'need-ic'}, plan.done===plan.total?'✅':'💡'), h('div',{class:'need-b'}, h('b',{}, `خطة اليوم: ${plan.done} من ${plan.total}`), h('span',{class:'tiny'}, plan.done===plan.total? 'أنجزت كل مهمات اليوم 🎉' : 'الباقي: '+plan.items.filter(it=>!planDoneToday(kPlanPath(it.path))).map(it=>it.label||stationName(kPlanPath(it.path))).join('، '))), h('button',{class:'btn btn-sm', onclick:()=>renderParent('plan')},'الخطة')));
   if (notes.length) needs.push(h('div',{class:'need'}, h('span',{class:'need-ic'},'📨'), h('div',{class:'need-b'}, h('b',{}, `${notes.length} ${notes.length===1?'رسالة جديدة':'رسائل جديدة'} منها`), h('span',{class:'tiny'}, notes[0].text.slice(0,60))), h('button',{class:'btn btn-sm', onclick:()=>renderParent('messages')},'اقرأ')));
   if (!needs.length) needs.push(h('div',{class:'need ok'}, h('span',{class:'need-ic'},'✅'), h('div',{class:'need-b'}, h('b',{},'ما فيه شيء ينتظرك الآن'), h('span',{class:'tiny'},'كل الاعتمادات تمت، ولا توجد رسائل جديدة.'))));
   const tiles=PSECTIONS.map(sec=>{ const n=sec.badge? sec.badge():0; return h('button',{class:'ptile', onclick:()=>renderParent(sec.key)}, n? h('span',{class:'pt-badge'}, n):null, h('span',{class:'pt-ic'}, sec.icon), h('span',{class:'pt-t'}, sec.title), h('span',{class:'pt-d'}, sec.desc)); });
@@ -4285,8 +4319,8 @@ function tabToday(){
   const mx=Math.max(goal, ...perDay, 1);
   const cols=h('div',{class:'cols'}, ...days.map((d,i)=>h('div',{class:'col'}, h('i',{class: perDay[i]>=goal?'goal':'', style:`height:${Math.max(2,Math.round(100*perDay[i]/mx))}%`, title:`${perDay[i]} د`}), h('span',{}, DAYS_AR[new Date(d+'T12:00:00').getDay()].slice(0,3)))));
   const insights=buildInsights();
-  Parent.ensure(); const wp=S.parent.weekPlan; const pk=todayPlanKey(); const planItems=(wp && wp.days && wp.days[pk])||[];
-  const planCard = planItems.length ? h('div',{class:'card'}, h('h3',{},'💡 مهمات اليوم من خطة المدرسة'), h('p',{class:'tiny', style:'margin-bottom:6px'},'هذي الأهداف تضيء لها لمبة داخل اللعبة اليوم.'), ...planItems.map(it=>h('div',{class:'ev'}, h('span',{class: targetDoneToday(it.path)?'ok':'bad'}, targetDoneToday(it.path)?'✓ أنجزتها':'⬜ لم تُنجز بعد'), h('span',{}, it.label||stationName(it.path)), h('span',{class:'muted'}, '📖 ', srcOf(it.path))))) : null;
+  const wp=effectivePlan(); const pk=todayPlanKey(); const planItems=(wp && wp.days && wp.days[pk])||[];
+  const planCard = planItems.length ? h('div',{class:'card'}, h('h3',{},'💡 مهمات اليوم من خطة المدرسة'), h('p',{class:'tiny', style:'margin-bottom:6px'},'هذي الأهداف تضيء لها لمبة داخل اللعبة اليوم، وتتحول إلى ✅ أول ما تخلّصها أو ترسلها لك.'), ...planItems.map(it=>{ const kp=kPlanPath(it.path); const stt=planItemState(kp); return h('div',{class:'ev'}, h('span',{class: stt?'ok':'bad'}, stt==='wait'?'📨 أرسلتها وتنتظر تقييمك': stt?'✓ أنجزتها':'⬜ لم تُنجز بعد'), h('span',{}, it.label||stationName(kp)), h('span',{class:'muted'}, '📖 ', srcOf(kp))); })) : null;
   const tl=stations.length ? stations.map(st=>{
     const evs=st.events.filter(e=>e.s===st.s && e.t<=st.t+2000 && e.t>=st.t-(st.ms||0)-2000);
     const answers=evs.filter(e=>e.k==='answer'); const reads=evs.filter(e=>e.k==='read_end'); const taps=evs.filter(e=>e.k==='word_tap').map(e=>e.w);
