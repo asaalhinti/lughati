@@ -407,20 +407,6 @@ audio{width:100%;max-width:520px;height:44px}
 .work-card .ink{margin-top:6px}
 .pill.ind{background:#E4F5E1;color:#1b5e20}.pill.help{background:#FFF1D6;color:#8a4b00}.pill.shown{background:#FDE3E3;color:#b71c1c}
 
-/* ===== صفحات الكتاب داخل اللعبة ===== */
-.ib-page{position:relative;background:#F4F8FC;border-radius:10px;white-space:normal}
-.ib-page .ibp-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none;background:#fff}
-.ib-page.has .ibp-img{display:block}
-.ib-page.has .ibp-fb{display:none}
-.ibp-fb{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-size:30px;color:#12355b;text-align:center;padding:10px}
-.ibp-ic{font-size:64px;line-height:1}
-.ibp-fb span{font-size:22px;color:#5b6b7d}
-.bk{display:flex;flex-direction:column;gap:8px}
-.bk-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.bk-nav .pg{font-weight:800}
-.node.ex{border-style:dashed;background:#FFF8EC}
-.banner.ex{background:#FFF1DC;color:#7a4a00;border:2px dashed #F2B866}
-
 </style>
 </head>
 <body>
@@ -1797,8 +1783,7 @@ function fbAdapter(FB, code){
     orderBy(f,dir){ return collRef(c,[f,dir||'asc'],lim); }, limit(n){ return collRef(c,ob,n); },
     async get(){ const parts=[FB.collection(fsdb, base+c)]; if(ob) parts.push(FB.orderBy(ob[0], ob[1])); parts.push(FB.limit(lim)); const q=FB.query(...parts); const res=await FB.getDocs(q); return {docs: res.docs.map(wrapSnap), size:res.size, empty:res.empty}; },
     doc(id){ return docRef(c+'/'+id); } });
-  const abs = p => ({ async get(){ return wrapSnap(await FB.getDoc(FB.doc(fsdb, p))); } });
-  return { doc: docRef, collection: c=>collRef(c), raw: fsdb, abs };
+  return { doc: docRef, collection: c=>collRef(c), raw: fsdb };
 }
 
 /* ===================== ملفات (تسجيلات/صور) داخل Firestore مقسّمة إلى أجزاء ===================== */
@@ -1955,10 +1940,7 @@ window.addEventListener('pagehide', ()=>Log.flush());
 /* ===================== بيانات الطفلة/الوالد ===================== */
 const Child = {
   ensure(){ if(!S.child) S.child={pending:[], notes:[], handwriting:[], recordings:[], works:[], seenMsgs:{}}; for(const k of ['pending','notes','handwriting','recordings','works']) if(!S.child[k]) S.child[k]=[]; if(!S.child.seenMsgs) S.child.seenMsgs={}; return S.child; },
-  /* صفحات الكتاب كثيرة: نحتفظ بكل ما ينتظر بابا، ونحذف الأقدم من المُقيَّم فقط عند الامتلاء */
-  addPending(p){ this.ensure(); const L=S.child.pending; L.unshift(Object.assign({id:uid(), ts:Date.now(), status:'pending'}, p));
-    let extra=L.length-260; if(extra>0){ for(let i=L.length-1;i>=0 && extra>0;i--) if(L[i].status!=='pending'){ L.splice(i,1); extra--; } }
-    return Store.set('child', S.child); },
+  addPending(p){ this.ensure(); S.child.pending.unshift(Object.assign({id:uid(), ts:Date.now(), status:'pending'}, p)); S.child.pending=S.child.pending.slice(0,60); return Store.set('child', S.child); },
   note(text, kind){ this.ensure(); S.child.notes.unshift({id:uid(), ts:Date.now(), text, kind:kind||'note'}); S.child.notes=S.child.notes.slice(0,40); return Store.set('child', S.child); },
   save(){ this.ensure(); return Store.set('child', S.child); }
 };
@@ -2018,7 +2000,6 @@ function pageLast(p){ const all=Array.from(String(p||'').matchAll(/[٠-٩]+/g)).
 function lessonRange(key){ const L=BOOK.lessons[key]; if(!L) return null; return `${toAr(pageNum(L.read))}–${toAr(pageLast(L.hw||L.express))}`; }
 /* رقم/نطاق صفحة أي مسار في اللعبة (أو null إن لم يكن في الكتاب) */
 function pageOf(path){
-  const bp=bookPagesOf(path); if(bp) return fmtPages(bp);
   const [a,b,c]=String(path||'').split('/');
   const L=BOOK.lessons[a]; if(L) return b? (L[b]||null) : lessonRange(a);
   const U=BOOK.units[a]; if(U){ if(!b) return U.range; if(b==='task'){ if(c==='project') return U.project||null; if(c==='family') return U.family||null; return null; } return U[b]||null; }
@@ -2251,7 +2232,7 @@ async function runItems(items, ctx){
     g.setDots(items.length, i, results);
     const item=items[i]; const skill=item.skill||ctx.skill;
     /* سطر المصدر لكل جزء: صفحة العنصر إن وُجدت، وإلا صفحة المحطة */
-    if (item.page && !isX(ctx.path||'')) g.setSrc(pageLabel(item.page)); else if (ctx.path) g.setSrc(ctx.path);
+    if (item.page) g.setSrc(pageLabel(item.page)); else if (ctx.path) g.setSrc(ctx.path);
     const level = ctx.level || Progress.skillLevel(skill);
     g.cur={i:i+1, n:items.length, it:stripT(N(item.q||item.w||item.answer||'')).slice(0,50)};
     const r = await runItem(item, {g, level, hint:ctx.hint, autoSay:ctx.autoSay, footExtra:ctx.footExtra});
@@ -2433,7 +2414,6 @@ function inkBlockH(b){
     case 'circle': return 96 * Math.ceil(b.w.length / 4);
     case 'tick': return 60 + 78 * b.o.length;
     case 'gap': return b.h || 20;
-    case 'page': return Math.round((INK_W - 40) * (b.r || BOOK_RATIO));
   }
   return 0;
 }
@@ -2445,14 +2425,6 @@ function inkBlockEl(b, opt){
   if (b.t === 'note') return h('div', { class: 'ib ib-note', style: st }, N(b.x));
   if (b.t === 'model') return h('div', { class: 'ib ib-model', style: st + `;font-size:${inkFit(b.x, 720, 46)}px` }, N(b.x));
   if (b.t === 'gap') return h('div', { class: 'ib', style: st });
-  if (b.t === 'page'){
-    /* صفحة الكتاب نفسها (صورة من مساحة العائلة)؛ إن لم تتوفر يظهر رقم الصفحة لتفتحها من كتابها */
-    const img = h('img', { class: 'ibp-img', alt: '', draggable: 'false' });
-    const fb = h('div', { class: 'ibp-fb' }, h('div', { class: 'ibp-ic' }, '📖'), h('b', {}, 'صَفْحَة ' + toAr(b.p)), h('span', {}, 'افْتَحِي كِتَابَكِ عَلَى هَذِهِ الصَّفْحَةِ'));
-    const box = h('div', { class: 'ib ib-page', style: st, 'data-page': String(b.p) }, fb, img);
-    BookPages.get(b.p).then(u => { if (u){ img.src = u; box.classList.add('has'); } }).catch(() => {});
-    return box;
-  }
   if (b.t === 'lines') return h('div', { class: 'ib ib-lines', style: st }, ...Array.from({ length: b.n || 1 }, () => inkLineRow()));
   if (b.t === 'dict') return h('div', { class: 'ib ib-lines', style: st }, ...b.w.map((w, i) => {
     const btn = h('span', { class: 'il-say', 'data-tap': '1' }, '🔊'); btn._tap = () => { Log.ev({ k: 'tts', txt: stripT(N(w)).slice(0, 40) }); Say.speakUI(btn, w); };
@@ -2655,10 +2627,10 @@ const STATION_DEFS = [
   {key:'color',     title:'اكْتُبِي وَلَوِّنِي',          icon:'🎨', skill:null},
 ];
 function stationSkill(def, lesson){ if(def.key==='color') return lesson.sort.skill; return def.skill || (lesson[def.key] && lesson[def.key].skill) || 'comp'; }
-function lessonStations(l){ return l && l.isX ? STATION_DEFS : bookLessonDefs(l.key); }
-function findLesson(key){ const x=isX(key), k=unX(key); for(const u of CONTENT.units) for(let i=0;i<u.lessons.length;i++) if(u.lessons[i].key===k){ if(!x) return {unit:u, lesson:u.lessons[i]}; const xu=xUnit(u); return {unit:xu, lesson:xu.lessons[i]}; } return null; }
-function lessonStars(l){ return lessonStations(l).reduce((a,d)=>a+Progress.stars(`${l.key}/${d.key}`),0); }
-function lessonDone(l){ return lessonStations(l).filter(d=>Progress.stars(`${l.key}/${d.key}`)>0).length; }
+function lessonStations(l){ return STATION_DEFS; }
+function findLesson(key){ for(const u of CONTENT.units) for(const l of u.lessons) if(l.key===key) return {unit:u, lesson:l}; return null; }
+function lessonStars(l){ return STATION_DEFS.reduce((a,d)=>a+Progress.stars(`${l.key}/${d.key}`),0); }
+function lessonDone(l){ return STATION_DEFS.filter(d=>Progress.stars(`${l.key}/${d.key}`)>0).length; }
 /* مهام الوحدة مع بابا: مشروع الوحدة ونشاط الأسرة (من الكتاب) + مهام إضافية من اللعبة */
 function unitTasks(u){
   const U=BOOK.units[u.key]||{}; const out=[];
@@ -2669,27 +2641,26 @@ function unitTasks(u){
 }
 /* أجزاء الوحدة بترتيب صفحات الكتاب (كل جزء له مسار وحد أقصى من النجوم) */
 function unitBlocks(u){
-  if (!u.isX) return bookUnitBlocks(u);
   const B=[]; const k=u.key;
   if (EXTRA.verses[k]) B.push({key:'verse', path:`${k}/verse`, icon:'📖', title:'آيَةٌ كَرِيمَةٌ', sub:EXTRA.verses[k].ref, max:1, info:true});
   if (EXTRA.family[k]) B.push({key:'family', path:`${k}/task/family`, icon:'👨‍👩‍👧', title:'نَشَاطٌ مَعَ الْأُسْرَةِ', sub:'نَلْعَبُهُ فِي الْبَيْتِ مَعَ بَابَا', max:3, task:'family'});
-  if (!u.isX) B.push({key:'guide', path:`${k}/guide`, icon:'🗺️', title:'مَاذَا سَنَتَعَلَّمُ؟', sub:'مَاذَا نَتَعَلَّمُ فِي هَذِهِ الْوَحْدَةِ؟', max:1, info:true});
-  B.push({key:'warmup', path:`${k}/warmup`, icon:'🎈', title:'لُعْبَةُ التَّهْيِئَةِ', sub:u.warmup.title, max:3});
+  B.push({key:'guide', path:`${k}/guide`, icon:'🗺️', title:'مَاذَا سَنَتَعَلَّمُ؟', sub:'مَاذَا نَتَعَلَّمُ فِي هَذِهِ الْوَحْدَةِ؟', max:1, info:true});
+  B.push({key:'warmup', path:`${k}/warmup`, icon:'🎈', title:'نَشَاطَاتُ التَّهْيِئَةِ', sub:u.warmup.title, max:3});
   if (EXTRA.projects[k]) B.push({key:'project', path:`${k}/task/project`, icon:'🛠️', title:'أُنْجِزُ مَشْرُوعِي', sub:'مَشْرُوعٌ صَغِيرٌ فِي الْبَيْتِ', max:3, task:'project'});
-  B.push({key:'listen', path:`${k}/listen`, icon:'👂', title:'قِصَّةٌ أَسْمَعُهَا', sub:u.listening.title, max:3});
-  if (!u.isX) B.push({key:'nasheed', path:`${k}/nasheed`, icon:'🎵', title:'النَّشِيدُ', sub:u.nasheed.title, max:3});
-  for (const l of u.lessons) B.push({key:l.key, path:l.key, lesson:l, icon:l.emoji, title:`تَمَارِينُ الدَّرْسِ ${l.n===1?'الْأَوَّلِ':'الثَّانِي'}: ${l.title}`, max:STATION_DEFS.length*3});
-  B.push({key:'boss', path:`${k}/boss`, icon:'🦅', title:'تَحَدِّي الْوَحْدَةِ', sub:'١٠ أَسْئِلَةٍ مِنْ تَمَارِينِ الدَّرْسَيْنِ', max:3, boss:true});
+  B.push({key:'listen', path:`${k}/listen`, icon:'👂', title:'نَصُّ الِاسْتِمَاعِ', sub:u.listening.title, max:3});
+  B.push({key:'nasheed', path:`${k}/nasheed`, icon:'🎵', title:'النَّشِيدُ', sub:u.nasheed.title, max:3});
+  for (const l of u.lessons) B.push({key:l.key, path:l.key, lesson:l, icon:l.emoji, title:`الدَّرْسُ ${l.n===1?'الْأَوَّلُ':'الثَّانِي'}: ${l.title}`, max:STATION_DEFS.length*3});
+  B.push({key:'boss', path:`${k}/boss`, icon:'🦅', title:'تَحَدِّي الْوَحْدَةِ', sub:'التَّقْوِيمُ: ١٠ أَسْئِلَةٍ مِنَ الدَّرْسَيْنِ', max:3, boss:true});
   if (u.tasks.length) B.push({key:'extra', path:`${k}/task/extra`, icon:'🏡', title:'مَهَمَّاتٌ مَعَ بَابَا', sub:'مَهَمَّاتٌ إِضَافِيَّةٌ فِي الْبَيْتِ', max:u.tasks.length*3, task:'extra'});
   return B;
 }
 function blockStars(u, b){ if(b.lesson) return lessonStars(b.lesson); if(b.task==='extra') return u.tasks.reduce((a,t)=>a+Progress.stars(`${u.key}/task/${t.key}`),0); return Progress.stars(b.path); }
 function unitStars(u){ return unitBlocks(u).reduce((a,b)=>a+blockStars(u,b),0); }
 function unitMax(u){ return unitBlocks(u).reduce((a,b)=>a+b.max,0); }
-function bossUnlocked(u){ return u.isX ? (lessonDone(u.lessons[0])>=6 && lessonDone(u.lessons[1])>=6) : u.lessons.every(lessonFinished); }
+function bossUnlocked(u){ return lessonDone(u.lessons[0])>=6 && lessonDone(u.lessons[1])>=6; }
 /* لا شيء مقفل: فقط تذكير لطيف إذا دخلت درساً/وحدة قبل إكمال السابق (إلا إذا كان هدف اليوم في الخطة) */
 function isPendingPath(path){ Child.ensure(); return S.child.pending.some(p=>p.station===path && p.status==='pending'); }
-function lessonFinished(l){ return lessonStations(l).filter(d=>d.key!=='color').every(d=>Progress.stars(`${l.key}/${d.key}`)>0 || isPendingPath(`${l.key}/${d.key}`)); }
+function lessonFinished(l){ return STATION_DEFS.filter(d=>d.key!=='color').every(d=>Progress.stars(`${l.key}/${d.key}`)>0 || isPendingPath(`${l.key}/${d.key}`)); }
 function unitFinished(u){ return u.lessons.every(lessonFinished) && Progress.stars(`${u.key}/boss`)>0; }
 function remindOn(){ return !S.settings || S.settings.remindPrev!==false; }
 /* يعرض رسالة "ما خلصتِ السابق" ثم ينفّذ الاختيار. prev:{name, go} */
@@ -2716,9 +2687,9 @@ function enterBoss(u){
   const l = u.lessons.find(x=>!lessonFinished(x));
   prevGate({path:`${u.key}/boss`, what:'أَلْعَابَ الدَّرْسَيْنِ', prev: l && !bossUnlocked(u) ? {path:l.key, name:`${l.emoji} ${l.title}`, go:()=>go('lesson',l.key)} : null, enter:()=>runBoss(u)});
 }
-const introStars = () => CONTENT.intro.games.reduce((a,g)=>a+Progress.stars('x-intro/'+g.key),0);
+const introStars = () => CONTENT.intro.games.reduce((a,g)=>a+Progress.stars('intro/'+g.key),0);
 const introMax = () => CONTENT.intro.games.length*3;
-const TOTAL_MAX = () => CONTENT.units.reduce((a,u)=>a+unitMax(u),0) + BK.intro.length*3 + BK.lib.length*3;
+const TOTAL_MAX = () => CONTENT.units.reduce((a,u)=>a+unitMax(u),0) + introMax() + CONTENT.library.length*3;
 
 /* ===================== الشاشة الرئيسية ===================== */
 function render(){
@@ -2726,10 +2697,8 @@ function render(){
   if (S.screen==='home') renderHome();
   else if (S.screen==='unit') renderUnit(S.nav[0]);
   else if (S.screen==='lesson') renderLesson(S.nav[0]);
-  else if (S.screen==='library') renderLibraryBook();
-  else if (S.screen==='xlibrary') renderLibrary();
-  else if (S.screen==='intro') renderIntroBook();
-  else if (S.screen==='xintro') renderIntro();
+  else if (S.screen==='library') renderLibrary();
+  else if (S.screen==='intro') renderIntro();
   else if (S.screen==='parent') renderParent(S.nav[0]);
   else if (S.screen==='setup') renderSetup();
   else renderHome();
@@ -2764,7 +2733,7 @@ function parentBubble(){
       h('button',{class:'btn btn-sm btn-primary', onclick:async()=>{ S.child.seenMsgs[msg.id]=Date.now(); Log.ev({k:'msg_seen', id:msg.id}); await Child.save(); render(); }},'شُكْرًا بَابَا ❤️'))));
   const m=S.parent.mission;
   if (m && m.key && (!S.child.missionDone || S.child.missionDone!==m.ts)){
-    const target = m.key.startsWith('u') && m.key.includes('l') ? (findLesson(m.key)||{}).lesson : findUnit(m.key);
+    const target = m.key.startsWith('u') && m.key.includes('l') ? (findLesson(m.key)||{}).lesson : CONTENT.units.find(u=>u.key===m.key);
     if (target) out.push(h('div',{class:'bubble'}, h('div',{class:'row between'}, h('div',{}, h('b',{},'🎯 مُهِمَّةُ الْيَوْمِ مِنْ بَابَا'), h('p',{}, m.text||('الْعَبِي: '+target.title))),
       h('button',{class:'btn btn-sm btn-sky', onclick:()=>{ Log.ev({k:'mission_open', key:m.key}); if(m.key.includes('l')) go('lesson', m.key); else go('unit', m.key); }},'ابْدَئِي 🚀'))));
   }
@@ -2774,14 +2743,11 @@ function parentBubble(){
 function runByPath(path){
   const [a,b]=path.split('/');
   const f=findLesson(a);
-  if (f){ if (b && lessonStations(f.lesson).some(d=>d.key===b)) return runStation(f.unit, f.lesson, b); return go('lesson', a); }
-  const u=findUnit(a);
-  if (u && !u.isX){ const blk=bookUnitBlocks(u).find(x=>x.key===b && !x.lesson); return blk? runBookBlock(u, blk) : go('unit', u.key); }
-  if (u){ if(b==='warmup') return runWarmup(u); if(b==='listen') return runListening(u); if(b==='boss') return runBoss(u); if(b==='task') { const c=path.split('/')[2]; go('unit',u.key); return openTasks(u, c||null); } return go('unit', u.key); }
-  if (a==='intro'){ const st=BK.intro.find(x=>x.key===b); return st? runBookIntro(st) : go('intro'); }
-  if (a==='x-intro'){ const gm=CONTENT.intro.games.find(g=>g.key===b); return gm? runIntroGame(gm) : go('xintro'); }
-  if (a==='lib'){ const st=BK.lib.find(x=>x.key===b); return st? runBookLib(st) : go('library'); }
-  if (a==='x-lib'){ const st=CONTENT.library.find(x=>x.key===b); return st? runLibrary(st) : go('xlibrary'); }
+  if (f && b){ if (STATION_DEFS.some(d=>d.key===b)) return runStation(f.unit, f.lesson, b); return go('lesson', a); }
+  const u=CONTENT.units.find(x=>x.key===a);
+  if (u){ if(b==='warmup') return runWarmup(u); if(b==='listen') return runListening(u); if(b==='nasheed') return runNasheed(u); if(b==='boss') return runBoss(u); if(b==='verse'||b==='guide') return runUnitInfo(u,b); if(b==='task') { const c=path.split('/')[2]; go('unit',u.key); return openTasks(u, c||null); } return go('unit', u.key); }
+  if (a==='intro'){ const gm=CONTENT.intro.games.find(g=>g.key===b); return gm? runIntroGame(gm) : go('intro'); }
+  if (a==='lib'){ const s=CONTENT.library.find(x=>x.key===b); return s? runLibrary(s) : go('library'); }
   if (a==='review') return runReview();
   go('home');
 }
@@ -2790,17 +2756,14 @@ function todayPlanKey(){ return ['sun','mon','tue','wed','thu','fri','sat'][new 
 function targetDoneToday(path){ const b=Progress.ensure().best[path]; return !!(b && b.last && dayKey(b.last)===dayKey()); }
 /* اسم بسيط ومشكول للمحطة يناسب طفلة في الصف الثاني (يظهر للبنت بدل مصطلحات المدرسة) */
 function kidLabel(path){
-  const [a,b]=path.split('/'); const X=isX(a)? '🧩 تَمْرِين: ' : '';
+  const [a,b]=path.split('/');
   const f=findLesson(a);
-  if (f){ const d=lessonStations(f.lesson).find(x=>x.key===b); return X + (d? `${d.icon} ${d.title} — ${bookTitle(f.lesson)}` : `${f.lesson.emoji} دَرْسُ ${bookTitle(f.lesson)}`); }
-  const u=findUnit(a);
-  if (u && !u.isX){ const blk=bookUnitBlocks(u).find(x=>x.key===b); return blk? `${blk.icon} ${blk.title} — ${u.title}` : `${u.icon} ${u.title}`; }
-  if (u){ const c=path.split('/')[2]; if(b==='task' && c){ const t=unitTasks(u).find(x=>x.key===c); if(t) return X+`${t.emoji} ${t.title} — ${u.title}`; }
-    const m={warmup:`🎈 لُعْبَةُ التَّهْيِئَةِ — ${u.title}`, listen:`👂 قِصَّةٌ أَسْمَعُهَا: ${u.listening.title}`, boss:`🦅 تَحَدِّي الْوَحْدَةِ — ${u.title}`, task:`🏡 مَهَمَّةٌ مَعَ بَابَا — ${u.title}`}; return X + (m[b] || `${u.icon} ${u.title}`); }
-  if (a==='intro'){ const st=BK.intro.find(x=>x.key===b); return st? `${st.icon} ${st.title}` : '🔤 مُرَاجَعَةُ مُكْتَسَبَاتِي السَّابِقَةِ'; }
-  if (a==='x-intro'){ const g=CONTENT.intro.games.find(x=>x.key===b); return X + (g? `🔤 ${g.title}` : 'أَلْعَابُ الْمُرَاجَعَةِ'); }
-  if (a==='lib'){ const st=BK.lib.find(x=>x.key===b); return st? `${st.icon} أَنَا أَقْرَأُ: ${st.title}` : '📚 أَنَا أَقْرَأُ'; }
-  if (a==='x-lib'){ const st=CONTENT.library.find(x=>x.key===b); return X + (st? `${st.icon} قِصَّةُ: ${st.title}` : 'قِصَصٌ إِضَافِيَّةٌ'); }
+  if (f){ const d=STATION_DEFS.find(x=>x.key===b); return d? `${d.icon} ${d.title} — ${f.lesson.title}` : `${f.lesson.emoji} دَرْسُ ${f.lesson.title}`; }
+  const u=CONTENT.units.find(x=>x.key===a);
+  if (u){ const c=path.split('/')[2]; if(b==='task' && c){ const t=unitTasks(u).find(x=>x.key===c); if(t) return `${t.emoji} ${t.title} — ${u.title}`; }
+    const m={warmup:`🎈 نَشَاطَاتُ التَّهْيِئَةِ — ${u.title}`, listen:`👂 نَصُّ الِاسْتِمَاعِ: ${u.listening.title}`, nasheed:`🎵 نَشِيدُ: ${u.nasheed.title}`, boss:`🦅 تَحَدِّي الْوَحْدَةِ — ${u.title}`, task:`🏡 مَهَمَّةٌ مَعَ بَابَا — ${u.title}`, verse:`📖 آيَةٌ كَرِيمَةٌ — ${u.title}`, guide:`🗺️ مَاذَا سَنَتَعَلَّمُ؟ — ${u.title}`}; return m[b] || `${u.icon} ${u.title}`; }
+  if (a==='intro'){ const g=CONTENT.intro.games.find(x=>x.key===b); return g? `🔤 ${g.title}` : '🔤 مُرَاجَعَةُ مُكْتَسَبَاتِي'; }
+  if (a==='lib'){ const s=CONTENT.library.find(x=>x.key===b); return s? `${s.icon} قِصَّةُ: ${s.title}` : '📚 مَكْتَبَةُ الصَّقْرِ'; }
   if (a==='review') return '🧰 صُنْدُوقُ الْأَخْطَاءِ';
   return path;
 }
@@ -2831,9 +2794,9 @@ function renderHome(){
     nakhlaBar(),
     S.mode!=='db' ? h('div',{class:'banner'}, S.fb ? '⚠️ لبابا: هذا الجهاز يلعب محليًا. للربط: افتح رابط لوحة بابا ← الإعدادات ← ربط هذا الجهاز بعائلة.' : '⚠️ لبابا: النتائج تنحفظ على هذا الجهاز فقط. افتح الرابط وأنت مسجّل دخولك بحسابك عشان توصل النتائج للوحة.') : null,
     h('div',{class:'grid'},
-      worldCard('cintro','🔤', 'مُرَاجَعَةُ مُكْتَسَبَاتِي', 'مِنْ كِتَابِي', Math.round(100*bookIntroStars()/(BK.intro.length*3)), ()=>go('intro'), false, 'intro'),
+      worldCard('cintro','🔤', CONTENT.intro.title, 'أَلْعَابٌ سَرِيعَةٌ', Math.round(100*introStars()/introMax()), ()=>go('intro'), false, 'intro'),
       ...CONTENT.units.map(u=>worldCard('c'+u.n, u.icon, u.title, `الْوَحْدَةُ ${['الْأُولَى','الثَّانِيَةُ','الثَّالِثَةُ','الرَّابِعَةُ'][u.n-1]}`, Math.round(100*unitStars(u)/unitMax(u)), ()=>enterUnit(u), false, u.key)),
-      worldCard('clib','📚','أَنَا أَقْرَأُ','مُلْحَقُ كِتَابِي', Math.round(100*bookLibStars()/(BK.lib.length*3)), ()=>go('library'), false, 'lib'),
+      worldCard('clib','📚','مَكْتَبَةُ الصَّقْرِ','قِصَصٌ جَمِيلَةٌ', Math.round(100*CONTENT.library.reduce((a,s)=>a+Progress.stars('lib/'+s.key),0)/(CONTENT.library.length*3)), ()=>go('library'), false, 'lib'),
     ),
     mc>0 ? h('div',{class:'card sand'}, h('div',{class:'row between'}, h('div',{}, h('h3',{},'🧰 صُنْدُوقُ الْأَخْطَاءِ'), h('p',{class:'small'}, `فِيهِ ${mc} ${mc>10?'سُؤَالًا':'أَسْئِلَةٍ'} أَخْطَأْتِ فِيهَا. أَجِيبِي صَحِيحًا ٣ مَرَّاتٍ لِتَخْرُجَ مِنَ الصُّنْدُوقِ! 💪`)),
         h('button',{class:'btn btn-primary btn-sm', onclick:()=>runReview()},'نُرَاجِعُ 💪'))) : null,
@@ -2853,22 +2816,21 @@ function node({icon, title, sub, stars, locked, onclick, badge, done, path, lamp
   return withLamp(el, lamp!==undefined ? lamp : (path? lampState(path,{parentOk:true}) : null));
 }
 function renderUnit(key){
-  const u=findUnit(key); if(!u) return go('home');
-  if (!u.isX) return renderUnitBook(u);
+  const u=CONTENT.units.find(x=>x.key===key); if(!u) return go('home');
   Child.ensure();
   const pendingOf = path => S.child.pending.some(p=>p.task && p.status==='pending' && (p.station===path || (path.endsWith('/extra') && u.tasks.some(t=>p.station===`${u.key}/task/${t.key}`))));
   const runners={warmup:()=>runWarmup(u), listen:()=>runListening(u), nasheed:()=>runNasheed(u), boss:()=>runBoss(u), verse:()=>runUnitInfo(u,'verse'), guide:()=>runUnitInfo(u,'guide')};
   const nodes=unitBlocks(u).map((b,i)=>{
     const st=blockStars(u,b);
-    if (b.lesson) return node({icon:b.icon, title:b.title, sub:`${lessonDone(b.lesson)} مِنْ ${STATION_DEFS.length} تَمَارِينَ`, stars:`${st} ⭐`, done:lessonDone(b.lesson)===STATION_DEFS.length, onclick:()=>enterLesson(u, b.lesson), path:b.path});
+    if (b.lesson) return node({icon:b.icon, title:b.title, sub:`${lessonDone(b.lesson)} مِنْ ${STATION_DEFS.length} أَلْعَابٍ`, stars:`${st} ⭐`, done:lessonDone(b.lesson)===STATION_DEFS.length, onclick:()=>enterLesson(u, b.lesson), path:b.path});
     if (b.task) { const pend=pendingOf(b.path); return node({icon:b.icon, title:b.title, sub: pend? '⏳ فِي انْتِظَارِ بَابَا' : b.sub, stars: b.task==='extra'? `${st} ⭐` : st, done: b.task==='extra'? st>=b.max : st>0, onclick:()=>openTasks(u, b.task==='extra'?'extra':b.task), badge: pend? '⏳ بَابَا':null, path:b.path}); }
     if (b.info) return node({icon:b.icon, title:b.title, sub:b.sub, done:st>0, onclick:runners[b.key], path:b.path});
     if (b.boss) return node({icon:b.icon, title:b.title, sub: bossUnlocked(u)? b.sub : 'الْأَفْضَلُ: أَكْمِلِي أَلْعَابَ الدَّرْسَيْنِ أَوَّلًا', stars:st, done:st>0, onclick:()=>enterBoss(u), badge:'تَحَدٍّ 🦅', path:b.path});
     return node({icon:b.icon, title:b.title, sub:b.sub, stars:st, done:st>0, onclick:runners[b.key], path:b.path});
   });
   const scr=h('div',{class:'screen'},
-    h('div',{class:'topbar'}, h('button',{class:'icon-btn', onclick:()=>go('unit', unX(u.key)), 'aria-label':'رجوع'},'→'), h('h2',{style:'flex:1'}, '🧩 تَمْرِين — ',u.title), h('span',{class:'chip stars'},'⭐ ', h('span',{class:'num'}, unitStars(u)),'/',unitMax(u))),
-    h('div',{class:'banner ex'}, '🧩 هَذِهِ تَمَارِينُ إِضَافِيَّةٌ تُنَاسِبُ الْوَحْدَةَ، وَلَيْسَتْ مِنَ الْكِتَابِ. دُرُوسُ الْكِتَابِ نَفْسُهَا فِي صَفْحَةِ الْوَحْدَةِ.'),
+    h('div',{class:'topbar'}, h('button',{class:'icon-btn', onclick:()=>go('home'), 'aria-label':'رجوع'},'→'), h('h2',{style:'flex:1'}, u.icon,' ',u.title), h('span',{class:'chip stars'},'⭐ ', h('span',{class:'num'}, unitStars(u)),'/',unitMax(u))),
+    h('div',{class:'card sand'}, h('p',{class:'small'}, '🌟 نَتَعَلَّمُ فِي هَذِهِ الْوَحْدَةِ: ', u.values), h('p',{class:'tiny', style:'margin-top:4px'}, '📖 صَفَحَاتُ هَذِهِ الْوَحْدَةِ فِي الْكِتَابِ: ', pageOf(u.key), ' — الْأَلْعَابُ مُرَتَّبَةٌ مِثْلَ الْكِتَابِ')),
     h('div',{class:'trail'}, ...nodes));
   mount(scr);
 }
@@ -2891,15 +2853,14 @@ function openTasks(u, focus=null){
 /* ===================== شاشة الدرس ===================== */
 function renderLesson(key){
   const f=findLesson(key); if(!f) return go('home'); const {unit:u, lesson:l}=f;
-  if (!l.isX) return renderLessonBook(u, l);
   Child.ensure();
   const isPend = path => S.child.pending.some(p=>p.station===path && p.status==='pending');
   const nodes=STATION_DEFS.map((d,i)=>{ const path=`${l.key}/${d.key}`; const st=Progress.stars(path); const pend=(d.key==='read'||d.key==='hw') && isPend(path);
     return node({icon:d.icon, title:`${i+1}. ${d.title}`, sub: pend? '⏳ فِي انْتِظَارِ بَابَا' : ((CONTENT.skills[stationSkill(d,l)]||{}).kid || (CONTENT.skills[stationSkill(d,l)]||{}).name), stars:st, done:st>0, onclick:()=>runStation(u,l,d.key), badge: pend?'⏳':null, path}); });
   const firstIncomplete = STATION_DEFS.find(d=>Progress.stars(`${l.key}/${d.key}`)===0 && !isPend(`${l.key}/${d.key}`));
   const scr=h('div',{class:'screen'},
-    h('div',{class:'topbar'}, h('button',{class:'icon-btn', onclick:()=>go('unit',u.key), 'aria-label':'رجوع'},'→'), h('h2',{style:'flex:1'}, '🧩 ',l.title), h('span',{class:'chip stars'},'⭐ ', h('span',{class:'num'}, lessonStars(l)),'/',STATION_DEFS.length*3)),
-    h('div',{class:'banner ex'}, '🧩 تَمَارِينُ إِضَافِيَّةٌ عَلَى مَهَارَاتِ الدَّرْسِ — لَيْسَتْ مِنَ الْكِتَابِ.'),
+    h('div',{class:'topbar'}, h('button',{class:'icon-btn', onclick:()=>go('unit',u.key), 'aria-label':'رجوع'},'→'), h('h2',{style:'flex:1'}, l.emoji,' ',l.title), h('span',{class:'chip stars'},'⭐ ', h('span',{class:'num'}, lessonStars(l)),'/',STATION_DEFS.length*3)),
+    h('p',{class:'tiny', style:'text-align:center'}, '📖 هَذَا الدَّرْسُ فِي الْكِتَابِ: الصَّفَحَات ', lessonRange(l.key)||'', ' — الْأَلْعَابُ بِنَفْسِ تَرْتِيبِ الصَّفَحَاتِ'),
     firstIncomplete ? h('button',{class:'btn btn-primary', onclick:()=>runStation(u,l,firstIncomplete.key)}, `ابْدَئِي: ${firstIncomplete.title} ${firstIncomplete.icon}`) : h('div',{class:'banner ok'},'🎉 أَكْمَلْتِ كُلَّ أَلْعَابِ هَذَا الدَّرْسِ! تَقْدِرِينَ تُعِيدِينَ أَيَّ لُعْبَةٍ لِتَزِيدِي نُجُومَكِ.'),
     h('div',{class:'trail'}, ...nodes));
   mount(scr);
@@ -2907,7 +2868,6 @@ function renderLesson(key){
 
 /* ===================== تشغيل محطة ===================== */
 async function runStation(u, l, key){
-  if (!l.isX) return runBookStation(u, l, key);
   const def=STATION_DEFS.find(d=>d.key===key); const path=`${l.key}/${key}`; const skill=stationSkill(def,l);
   Log.ev({k:'station_start', s:path});
   const g=makeGame(`${def.icon} ${def.title} — ${N(l.title)}`); g.setSrc(path);
@@ -3127,7 +3087,7 @@ async function stExpress(g,u,l,path,block){
   if(ok.aborted) return ok; const t0=Date.now();
   const pr=await runItems(block.items.map(it=>Object.assign({}, it, {skill:'express'})),{g,path,skill:'express',autoSay:false,practice:true});
   if(pr.aborted) return pr;
-  const oral=EXTRA.oral[unX(l.key)]; const q= oral? oral.q : 'اكْتُبِي جُمْلَةً عَنْ: '+l.title;
+  const oral=EXTRA.oral[l.key]; const q= oral? oral.q : 'اكْتُبِي جُمْلَةً عَنْ: '+l.title;
   const spec=[{t:'title',x:'أَكْتُبُ جُمْلَتِي ✏️'},{t:'note',x:q},{t:'note',x:'اكْتُبِي جُمْلَةً كَامِلَةً أَوْ جُمْلَتَيْنِ، وَلَا تَنْسَيِ النُّقْطَةَ.'},{t:'lines',n:3}];
   const w=await inkStep(g,{id:path, spec, path, label:'تعبير كتابي — '+N(l.title), intro:'✏️ فَكِّرِي ثُمَّ اكْتُبِي جُمْلَتَكِ بِنَفْسِكِ.'});
   if(w.aborted) return w;
@@ -3169,16 +3129,16 @@ async function stList(g, block, path, emoji){
 
 /* عناصر محطة التعبير: جمل الدرس + ترتيب فقرة (تنمية التعبير) + تعبير شفهي، كل عنصر يحمل صفحته */
 function expressItems(l){
-  const P=BOOK.lessons[unX(l.key)]||{};
+  const P=BOOK.lessons[l.key]||{};
   const items=l.express.map(it=>Object.assign({}, it, {skill:'express', page:P.express}));
-  const dev=EXTRA.dev[unX(l.key)]; if (dev) items.push({t:'order', q:`${dev.title}: ${dev.q}`, words:dev.words, answer:dev.answer, skill:'express', page:P.dev||P.express});
-  const oral=EXTRA.oral[unX(l.key)]; if (oral) items.push({t:'oral', emoji:oral.emoji, q:oral.q, skill:'express', page:P.express});
+  const dev=EXTRA.dev[l.key]; if (dev) items.push({t:'order', q:`${dev.title}: ${dev.q}`, words:dev.words, answer:dev.answer, skill:'express', page:P.dev||P.express});
+  const oral=EXTRA.oral[l.key]; if (oral) items.push({t:'oral', emoji:oral.emoji, q:oral.q, skill:'express', page:P.express});
   return items;
 }
 
 /* ---------- 11) واجبي في البيت: من الكتاب، يعتمده بابا ---------- */
 async function stHomework(g,u,l,path){
-  const text=EXTRA.hw[unX(l.key)]||'اكْتُبِي مَا طَلَبَتْهُ الْمُعَلِّمَةُ.'; const t0=Date.now();
+  const text=EXTRA.hw[l.key]||'اكْتُبِي مَا طَلَبَتْهُ الْمُعَلِّمَةُ.'; const t0=Date.now();
   const ok=await introCard(g,{emoji:'📓', title:'وَاجِبِي', text, tip:'حُلِّي وَاجِبَكِ هُنَا بِقَلَمِكِ عَلَى السُّطُورِ، ثُمَّ أَرْسِلِيهِ لِبَابَا.'});
   if(ok.aborted) return ok;
   const spec=[{t:'title',x:'وَاجِبِي — '+l.title},{t:'note',x:text},{t:'lines',n:5}];
@@ -3305,7 +3265,7 @@ async function stColor(g, u, l, path){
     g.abortCurrent=r=>res(r);
     let col=PEN_COLORS[2]; let fills=0;
     const pal=h('div',{class:'palette'}, ...PEN_COLORS.map((c,i)=>h('button',{class:'swatch'+(i===2?' on':''), style:`background:${c}`, 'aria-label':'لون', onclick:e=>{ col=c; pal.querySelectorAll('.swatch').forEach(x=>x.classList.remove('on')); e.currentTarget.classList.add('on'); }})));
-    const box=h('div',{class:'art', html:UNIT_ART[unX(u.key)]||UNIT_ART.u1});
+    const box=h('div',{class:'art', html:UNIT_ART[u.key]||UNIT_ART.u1});
     box.querySelectorAll('[data-r]').forEach(el=>el.addEventListener('click',()=>{ el.setAttribute('fill', col); if(el.tagName==='path' && el.getAttribute('fill')==='none') el.setAttribute('stroke', col); fills++; }));
     g.body.replaceChildren(h('div',{class:'card sand small'},'🎨 ثَالِثًا: اخْتَارِي لَوْنًا وَاضْغَطِي عَلَى أَجْزَاءِ الصُّورَةِ لِتُلَوِّنِيهَا. لَوِّنِي كَمَا تُحِبِّينَ!'), pal, box);
     g.foot.replaceChildren(h('button',{class:'btn btn-green', onclick:async()=>{ Log.ev({k:'art', s:path, fills}); try{ if(S.assets && fills>0){ const svg=new XMLSerializer().serializeToString(box.querySelector('svg')); const img=new Image(); const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg); await new Promise(r=>{ img.onload=r; img.onerror=r; img.src=url; }); const c=document.createElement('canvas'); c.width=640; c.height=440; const cx=c.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,640,440); cx.drawImage(img,0,0,640,440); const blob=await new Promise(r=>c.toBlob(r,'image/png')); if(blob){ const up=await S.assets.upload(blob,{type:'image/png'}); Child.ensure(); S.child.handwriting.unshift({id:up.id, ts:Date.now(), lesson:l.key, score:null, text:'لوحة ملوّنة', kind:'art'}); S.child.handwriting=S.child.handwriting.slice(0,40); await Child.save(); } } }catch(e){ console.warn('art upload', e); } res(true); }},'✅ خَلَصْتُ'));
@@ -3416,9 +3376,9 @@ function runBoss(u){ return runUnitBlock(u,'boss', async(g,path)=>{
 function renderIntro(){
   const I=CONTENT.intro;
   mount(h('div',{class:'screen'},
-    h('div',{class:'topbar'}, h('button',{class:'icon-btn', onclick:()=>go('intro'),'aria-label':'رجوع'},'→'), h('h2',{style:'flex:1'}, '🧩 تَمْرِين — أَلْعَابُ الْمُرَاجَعَةِ'), h('span',{class:'chip stars'},'⭐ ', h('span',{class:'num'}, introStars()),'/',introMax())),
-    h('div',{class:'banner ex'}, '🧩 أَلْعَابٌ إِضَافِيَّةٌ لِلْمُرَاجَعَةِ — لَيْسَتْ مِنَ الْكِتَابِ.'),
-    h('div',{class:'trail'}, ...I.games.map(gm=>node({icon: gm.icon || (gm.kind==='first'?'🔊': gm.kind==='sort'?'🧺':'🧩'), title:gm.title, sub:(CONTENT.skills[gm.skill]||{}).kid||(CONTENT.skills[gm.skill]||{}).name, stars:Progress.stars('x-intro/'+gm.key), done:Progress.stars('x-intro/'+gm.key)>0, onclick:()=>runIntroGame(gm), path:'x-intro/'+gm.key})))));
+    h('div',{class:'topbar'}, h('button',{class:'icon-btn', onclick:()=>go('home'),'aria-label':'رجوع'},'→'), h('h2',{style:'flex:1'}, I.icon,' ',I.title), h('span',{class:'chip stars'},'⭐ ', h('span',{class:'num'}, introStars()),'/',introMax())),
+    h('div',{class:'card sand'}, h('p',{class:'small'}, I.desc), h('p',{class:'tiny', style:'margin-top:4px'}, '📖 فِي الْكِتَابِ: الصَّفَحَات ', BOOK.introRange, ' — الْأَلْعَابُ بِنَفْسِ تَرْتِيبِ الصَّفَحَاتِ')),
+    h('div',{class:'trail'}, ...I.games.map(gm=>node({icon: gm.icon || (gm.kind==='first'?'🔊': gm.kind==='sort'?'🧺':'🧩'), title:gm.title, sub:(CONTENT.skills[gm.skill]||{}).kid||(CONTENT.skills[gm.skill]||{}).name, stars:Progress.stars('intro/'+gm.key), done:Progress.stars('intro/'+gm.key)>0, onclick:()=>runIntroGame(gm), path:'intro/'+gm.key})))));
 }
 /* زر الاستماع لتلاوة الآيات (آية آية) مع تلوين الآية الحالية إن وُجدت عناصر .sent */
 function reciteBtn(ayat, path, box){
@@ -3448,7 +3408,7 @@ async function introRead(g, gm, path){
   return {acc: approval.rating/3, ms, stars:approval.rating, total:1, extra:{notes:approval.notes, rec:!!audio}};
 }
 async function runIntroGame(gm){
-  const path='x-intro/'+gm.key; Log.ev({k:'station_start', s:path});
+  const path='intro/'+gm.key; Log.ev({k:'station_start', s:path});
   const g=makeGame(`${gm.icon||'🔤'} ${gm.title}`); g.setSrc(path); let r;
   if (gm.kind==='build'){
     const ok=await introCard(g,{emoji:gm.icon||'🧱', title:gm.title, tip:gm.intro}); if(ok.aborted) r=ok; else r=await runItems(gm.items.map(it=>({t:'dict', w:it.w, emoji:it.emoji, mode:'copy', skill:'dict'})),{g,path,skill:'dict'});
@@ -3470,30 +3430,30 @@ async function runIntroGame(gm){
     }
   } else if (gm.kind==='sort'){ r=await stSort(g, gm, path, {title:gm.title}); }
   else { const ok=await introCard(g,{emoji:'🧩', title:gm.title, tip:gm.intro}); if(ok.aborted) r=ok; else r=await runItems(gm.items.map(s=>({t:'syll', w:s.w, syl:s.syl, skill:'syll'})),{g,path,skill:'syll'}); }
-  if(!r||r.aborted){ Log.ev({k:'station_abort', s:path}); return go('xintro'); }
-  await finishStation(g, Object.assign({path, skill:gm.skill}, r)); go('xintro');
+  if(!r||r.aborted){ Log.ev({k:'station_abort', s:path}); return go('intro'); }
+  await finishStation(g, Object.assign({path, skill:gm.skill}, r)); go('intro');
 }
 function renderLibrary(){
   mount(h('div',{class:'screen'},
-    h('div',{class:'topbar'}, h('button',{class:'icon-btn', onclick:()=>go('library'),'aria-label':'رجوع'},'→'), h('h2',{style:'flex:1'},'🧩 تَمْرِين — قِصَصٌ إِضَافِيَّةٌ')),
+    h('div',{class:'topbar'}, h('button',{class:'icon-btn', onclick:()=>go('home'),'aria-label':'رجوع'},'→'), h('h2',{style:'flex:1'},'📚 مَكْتَبَةُ الصَّقْرِ')),
     h('div',{class:'card sand'}, h('p',{class:'small'},'قِصَصٌ قَصِيرَةٌ وَجَمِيلَةٌ: اقْرَئِي الْقِصَّةَ ثُمَّ أَجِيبِي عَنْ ٣ أَسْئِلَةٍ. 📚')),
-    h('div',{class:'trail'}, ...CONTENT.library.map(s=>node({icon:s.icon, title:s.title, sub:`${s.text.join(' ').split(/\s+/).length} كَلِمَةً · ${s.qs.length} أَسْئِلَةٍ`, stars:Progress.stars('x-lib/'+s.key), done:Progress.stars('x-lib/'+s.key)>0, onclick:()=>runLibrary(s), path:'x-lib/'+s.key})))));
+    h('div',{class:'trail'}, ...CONTENT.library.map(s=>node({icon:s.icon, title:s.title, sub:`${s.text.join(' ').split(/\s+/).length} كَلِمَةً · ${s.qs.length} أَسْئِلَةٍ`, stars:Progress.stars('lib/'+s.key), done:Progress.stars('lib/'+s.key)>0, onclick:()=>runLibrary(s), path:'lib/'+s.key})))));
 }
 async function runLibrary(s){
-  const path='x-lib/'+s.key; Log.ev({k:'station_start', s:path});
+  const path='lib/'+s.key; Log.ev({k:'station_start', s:path});
   const g=makeGame(`📚 ${s.title}`); g.setSrc(path);
   const ok=await introCard(g,{emoji:s.icon, title:s.title, tip:'اقْرَئِي الْقِصَّةَ بِصَوْتٍ عَالٍ. إِذَا صَعُبَتْ كَلِمَةٌ اضْغَطِيهَا لِتَسْمَعِيهَا. ثُمَّ أَجِيبِي عَنِ الْأَسْئِلَةِ. 📚'});
-  if(ok.aborted) return go('xlibrary');
+  if(ok.aborted) return go('library');
   const hard=[]; const words=s.text.join(' ').split(/\s+/).length;
   const rd=await readAloudFlow(g, {sents:s.text, path, hard, intro:'📚 اقْرَئِي الْقِصَّةَ بِصَوْتٍ عَالٍ (الْجَوَّالُ يُسَجِّلُ لِبَابَا). إِذَا صَعُبَتْ كَلِمَةٌ اضْغَطِيهَا، أَوِ اسْمَعِي الْقِصَّةَ كَامِلَةً 🔊.', under:(box)=>h('div',{class:'row center'}, h('button',{class:'btn btn-sm', onclick:()=>{ Log.ev({k:'listen_start', s:path}); speakStory(box, s.text, {stop:false}); }},'🔊 اسْمَعِيهَا'))});
-  if(rd.aborted){ Log.ev({k:'station_abort', s:path}); return go('xlibrary'); }
+  if(rd.aborted){ Log.ev({k:'station_abort', s:path}); return go('library'); }
   const {ms, rec}=rd; const wpm=ms>0?Math.round(words/(ms/60000)):0; Log.ev({k:'read_end', s:path, ms, words, wpm, hard:hard.slice(0,20), rec:!!rec});
   if (rec) await Rec.save(rec,{path, kind:'lib', text:N(s.title)});
   Progress.ensure(); S.progress.reading.push({ts:Date.now(), lesson:s.key, ms, wpm, hard:hard.length}); S.progress.reading=S.progress.reading.slice(-60);
   const r=await runItems(s.qs.map(q=>Object.assign({t:'mcq'},q,{skill:'comp'})),{g,path,skill:'comp', hint:(item)=>showEvidence(s.text,item.ev)});
-  if(r.aborted){ Log.ev({k:'station_abort', s:path}); return go('xlibrary'); }
+  if(r.aborted){ Log.ev({k:'station_abort', s:path}); return go('library'); }
   r.ms+=ms; r.extra={wpm};
-  await finishStation(g, Object.assign({path, skill:'comp'}, r)); go('xlibrary');
+  await finishStation(g, Object.assign({path, skill:'comp'}, r)); go('library');
 }
 async function runReview(){
   const list=Mistakes.list().slice(0,6); if(!list.length) return;
@@ -3508,306 +3468,6 @@ async function runReview(){
   await new Promise(res=>{ g.body.replaceChildren(h('div',{class:'result'}, h('div',{class:'big-stars'},'🧰'), h('h2',{}, `صَحَّحْتِ ${r.ok} مِنْ ${r.total}`), h('p',{class:'small'}, `بَقِيَ فِي الصُّنْدُوقِ: ${Mistakes.count()}`))); g.foot.replaceChildren(h('button',{class:'btn btn-primary', onclick:()=>res()},'تَمَام 👍')); });
   go('home');
 }
-
-/* ===================== الكتاب داخل اللعبة =====================
-   المسار الأساسي كله من كتاب المدرسة: كل محطة تعرض صفحات الكتاب نفسها (صور محفوظة في مساحة العائلة الخاصة)،
-   وسديم تقرأ منها وتكتب فوقها بالقلم. لا يوجد في هذا المسار أي نص من تأليف اللعبة.
-   كل ما هو من تأليف اللعبة موجود فقط في تبويب «تمرين»، ومفاتيحه تبدأ بـ x- (مثل x-u1l1/quiz). */
-const XP = 'x-';
-const isX = k => String(k || '').startsWith(XP);
-const unX = k => isX(k) ? String(k).slice(XP.length) : String(k || '');
-const _xUnits = {};
-/* نسخة «تمرين» من الوحدة: نفس المحتوى المؤلَّف لكن بمفاتيح x- حتى لا تختلط نتائجه بنتائج الكتاب */
-function xUnit(u){
-  if (u.isX) return u; if (_xUnits[u.key]) return _xUnits[u.key];
-  const xu = Object.create(u); xu.key = XP + u.key; xu.isX = true; xu.base = u;
-  xu.lessons = u.lessons.map(l => { const xl = Object.create(l); xl.key = XP + l.key; xl.isX = true; xl.base = l; return xl; });
-  return _xUnits[u.key] = xu;
-}
-function findUnit(key){ const u = CONTENT.units.find(x => x.key === unX(key)); return u ? (isX(key) ? xUnit(u) : u) : null; }
-
-/* ---------- خريطة الكتاب (لغتي، الصف الثاني، الجزء الأول): أرقام الصفحات المطبوعة ---------- */
-const BOOK_RATIO = 765 / 637;
-const BOOK_ORDER = ['read', 'quiz', 'vocab', 'phon', 'sort', 'dict', 'style', 'transform', 'khat', 'express', 'hw'];
-/* أسماء المحطات = أسماء أقسام الكتاب نفسها (العنوان الفرعي = اسم الباب الذي يقع تحته القسم في الكتاب) */
-const BOOK_DEFS = {
-  read:      { title: 'الدَّرْسُ',                   sub: 'أَقْرَأُ النَّصَّ',                icon: '📖', skill: 'read',    mode: 'read',  tip: '🗣️ اقْرَئِي نَصَّ الدَّرْسِ مِنْ صَفْحَةِ كِتَابِكِ بِصَوْتٍ عَالٍ. اضْغَطِي «بَدَأْتُ» لِيُسَجَّلَ صَوْتُكِ لِبَابَا.' },
-  quiz:      { title: 'أُجِيبُ',                     sub: 'الْفَهْمُ وَالِاسْتِيعَابُ',         icon: '🔍', skill: 'comp',    mode: 'read',  tip: '🗣️ أَجِيبِي شَفَهِيًّا عَنْ أَسْئِلَةِ «أُجِيبُ» فِي صَفْحَةِ كِتَابِكِ. اضْغَطِي «بَدَأْتُ» لِتُسَجَّلَ إِجَابَاتُكِ لِبَابَا.', doneTitle: 'أَجَبْتِ عَنِ الْأَسْئِلَةِ!' },
-  vocab:     { title: 'أُنَمِّي لُغَتِي',              sub: 'الْفَهْمُ وَالِاسْتِيعَابُ',         icon: '💎', skill: 'vocab',   mode: 'write' },
-  phon:      { title: 'الْأَدَاءُ الْقِرَائِيُّ',        sub: 'أَقْرَأُ وَأُلَاحِظُ، أُحَلِّلُ',     icon: '👂', skill: null,      mode: 'read',  tip: '🗣️ اقْرَئِي كَلِمَاتِ وَجُمَلَ «الْأَدَاءُ الْقِرَائِيُّ» مِنْ صَفْحَةِ كِتَابِكِ بِصَوْتٍ عَالٍ، وَحُلِّي «أُحَلِّلُ» بِالْقَلَمِ.' },
-  sort:      { title: 'التَّرَاكِيبُ اللُّغَوِيَّةُ',     sub: 'أَسْتَخْرِجُ',                    icon: '🧺', skill: null,      mode: 'write' },
-  dict:      { title: 'أَكْتُبُ',                    sub: 'الْإِمْلَاءُ',                    icon: '✍️', skill: 'dict',    mode: 'write', lines: 5 },
-  style:     { title: 'أَسْتَخْدِمُ',                 sub: 'التَّرَاكِيبُ اللُّغَوِيَّةُ',       icon: '🪄', skill: null,      mode: 'write' },
-  transform: { title: 'أُحَوِّلُ',                    sub: 'التَّرَاكِيبُ اللُّغَوِيَّةُ',       icon: '⚙️', skill: null,      mode: 'write' },
-  khat:      { title: 'الْخَطُّ',                    sub: 'أَرْسُمُ بِخَطِّي الْجَمِيلِ',       icon: '🖌️', skill: 'khat',    mode: 'write' },
-  express:   { title: 'أُعَبِّرُ',                    sub: 'التَّعْبِيرُ',                    icon: '🏗️', skill: 'express', mode: 'write' },
-  hw:        { title: 'الْوَاجِبُ الْمَنْزِلِيُّ',       sub: 'فِي دَفْتَرِ وَاجِبَاتِي',          icon: '📓', skill: 'hw',      mode: 'write', lines: 6 },
-};
-/* تصحيح خريطة الصفحات حيث يختلف قسم الكتاب عن مكان تمرين اللعبة القديم */
-const BOOK_FIX = { u3l1: { style: null }, u4l1: { style: [133] } };
-function parsePages(s){ const nums = Array.from(String(s || '').matchAll(/[٠-٩]+/g)).map(m => pageNum(m[0])); if (!nums.length) return null; const out = []; for (let i = nums[0]; i <= nums[nums.length - 1]; i++) out.push(i); return out; }
-const BK = {
-  intro: [
-    { key: 'rev1', icon: '🔤', title: 'مُرَاجَعَةُ مُكْتَسَبَاتِي السَّابِقَةِ (١)', pages: [7, 8, 9], mode: 'write' },
-    { key: 'rev2', icon: '🧩', title: 'مُرَاجَعَةُ مُكْتَسَبَاتِي السَّابِقَةِ (٢)', pages: [10, 11, 12], mode: 'write' },
-    { key: 'rev3', icon: '☀️', title: 'مُرَاجَعَةُ مُكْتَسَبَاتِي السَّابِقَةِ (٣)', pages: [13, 14, 15], mode: 'write' },
-    { key: 'khat', icon: '🖌️', title: 'أَتَعَلَّمُ فَنَّ الْخَطِّ', pages: [16], mode: 'write' },
-  ],
-  units: {
-    u1: { open: [17], guide: [18], warmup: [19, 20, 21], listen: [22, 23, 24, 25], nasheed: [26], boss: [47, 48, 49, 50, 51, 52] },
-    u2: { open: [53], guide: [54], warmup: [55], listen: [56, 57, 58], nasheed: [59], boss: [82, 83, 84, 85, 86] },
-    u3: { open: [87], guide: [88], warmup: [89, 90], listen: [91, 92], nasheed: [93], boss: [114, 115, 116, 117, 118] },
-    u4: { open: [119], guide: [120], warmup: [121, 122], listen: [123, 124], nasheed: [125], boss: [147, 148, 149] },
-  },
-  lib: [
-    { key: 't1', icon: '🦸', title: 'الْفَتَى الشُّجَاعُ', pages: [152, 153, 154] },
-    { key: 't2', icon: '🇸🇦', title: 'الْيَوْمُ الْوَطَنِيُّ', pages: [155, 156] },
-    { key: 't3', icon: '🕊️', title: 'الْحَمَامَتَانِ', pages: [157, 158] },
-    { key: 't4', icon: '🚪', title: 'آدَابُ الِاسْتِئْذَانِ', pages: [159, 160] },
-  ],
-  /* عناوين الكتاب كما هي مطبوعة فيه */
-  titles: {
-    u1: { nasheed: 'جَدَّتِي' }, u2: { nasheed: 'الْجَارُ وَالصَّدِيقُ' }, u3: { nasheed: 'وَطَنِي السُّعُودِيَّةُ' }, u4: { nasheed: 'هَيَّا نَزْرَعْ' },
-    u1l1: 'صِلَةُ الرَّحِمِ', u1l2: 'عُذْرًا يَا جَدِّي', u2l1: 'الصَّدِيقَانِ', u2l2: 'الْجَارُ الصَّغِيرُ',
-    u3l1: 'مَدِينَتَانِ مُقَدَّسَتَانِ', u3l2: 'عَلَمُ بِلَادِي', u4l1: 'رِحْلَةُ حَبَّةِ قَمْحٍ', u4l2: 'مَنْ أَنَا؟',
-  },
-};
-/* عنوان الدرس: من الكتاب في المسار الأساسي، وعنوان قصة التمرين داخل «تمرين» */
-function bookTitle(l){ return l.isX ? l.title : (BK.titles[l.key] || l.title); }
-const _bkDefs = {};
-function bookLessonDefs(key){
-  if (_bkDefs[key]) return _bkDefs[key]; const L = BOOK.lessons[key]; if (!L) return []; const fix = BOOK_FIX[key] || {}; const out = [];
-  for (const k of BOOK_ORDER){ const pages = (k in fix) ? fix[k] : parsePages(L[k]); if (pages && pages.length) out.push(Object.assign({ key: k, pages }, BOOK_DEFS[k])); }
-  return _bkDefs[key] = out;
-}
-function fmtPages(pages){ if (!pages || !pages.length) return ''; const a = pages[0], b = pages[pages.length - 1]; return a === b ? toAr(a) : `${toAr(a)}–${toAr(b)}`; }
-/* صفحات أي مسار من مسارات الكتاب (مصفوفة أرقام) أو null */
-function bookPagesOf(path){
-  const [a, b] = String(path || '').split('/');
-  if (BOOK.lessons[a]){ const defs = bookLessonDefs(a); if (!b) return [defs[0].pages[0], defs[defs.length - 1].pages.slice(-1)[0]]; const d = defs.find(x => x.key === b); return d ? d.pages : null; }
-  if (BK.units[a]){ if (!b) return null; return BK.units[a][b] || null; }
-  if (a === 'intro'){ if (!b) return [7, 16]; const s = BK.intro.find(x => x.key === b); return s ? s.pages : null; }
-  if (a === 'lib'){ if (!b) return [151, 160]; const s = BK.lib.find(x => x.key === b); return s ? s.pages : null; }
-  return null;
-}
-function bookUnitBlocks(u){
-  const k = u.key, T = BK.titles[k] || {}; const B = [];
-  B.push({ key: 'open', path: `${k}/open`, icon: '🚪', title: 'مَدْخَلُ الْوَحْدَةِ', sub: u.title, max: 1, mode: 'view' });
-  B.push({ key: 'guide', path: `${k}/guide`, icon: '🗺️', title: 'دَلِيلُ الْوَحْدَةِ', sub: 'الْكِفَايَاتُ الْمُسْتَهْدَفَةُ', max: 1, mode: 'view' });
-  B.push({ key: 'warmup', path: `${k}/warmup`, icon: '🎈', title: 'نَشَاطَاتُ التَّهْيِئَةِ', sub: 'وَأُنْجِزُ مَشْرُوعِي', max: 3, mode: 'write' });
-  B.push({ key: 'listen', path: `${k}/listen`, icon: '👂', title: 'نَصُّ الِاسْتِمَاعِ', sub: 'أَسْتَمِعُ وَأُجِيبُ', max: 3, mode: 'write', skill: 'listen' });
-  B.push({ key: 'nasheed', path: `${k}/nasheed`, icon: '🎵', title: 'النَّشِيدُ', sub: T.nasheed || '', max: 3, mode: 'read', kind: 'nasheed', skill: 'nasheed' });
-  u.lessons.forEach((l, i) => B.push({ key: l.key, path: l.key, lesson: l, icon: l.emoji, title: `الدَّرْسُ ${i === 0 ? 'الْأَوَّلُ' : 'الثَّانِي'}: ${bookTitle(l)}`, max: bookLessonDefs(l.key).length * 3 }));
-  B.push({ key: 'boss', path: `${k}/boss`, icon: '🦅', title: 'التَّقْوِيمُ التَّجْمِيعِيُّ', sub: 'أَسْئِلَةُ نِهَايَةِ الْوَحْدَةِ', max: 3, mode: 'write', boss: true });
-  return B;
-}
-
-/* ---------- صور صفحات الكتاب: من مساحة خاصة في قاعدة العائلة، وتُحفظ على الجهاز بعد أول تحميل ---------- */
-const BookPages = {
-  mem: {}, _idb: null,
-  code(){ return (S.settings && S.settings.bookCode) || ''; },
-  ready(){ return !!(this.code() && Store.db && Store.db.abs); },
-  idb(){ if (this._idb) return this._idb; this._idb = new Promise(res => { try{ const rq = indexedDB.open('lughati_book', 1); rq.onupgradeneeded = () => rq.result.createObjectStore('p'); rq.onsuccess = () => res(rq.result); rq.onerror = () => res(null); rq.onblocked = () => res(null); }catch(e){ res(null); } }); return this._idb; },
-  async cget(k){ const db = await this.idb(); if (!db) return null; return new Promise(res => { try{ const rq = db.transaction('p').objectStore('p').get(k); rq.onsuccess = () => res(rq.result || null); rq.onerror = () => res(null); }catch(e){ res(null); } }); },
-  async cput(k, v){ const db = await this.idb(); if (!db) return; try{ db.transaction('p', 'readwrite').objectStore('p').put(v, k); }catch(e){} },
-  /* يعيد رابط صورة الصفحة المطبوعة n أو null إن لم تتوفر */
-  get(n){
-    const code = this.code(); if (!code) return Promise.resolve(null); const k = code + '/' + n;
-    if (this.mem[k]) return this.mem[k];
-    return this.mem[k] = (async () => {
-      let d = await this.cget(k);
-      if (!d && this.ready()){
-        try{ const sn = await Store.db.abs(`families/${code}/book/p${String(n).padStart(3, '0')}`).get(); if (sn.exists){ const x = sn.data(); if (x && x.b64){ d = { b64: x.b64 }; this.cput(k, d); } } }
-        catch(e){ console.warn('book page', n, e); }
-      }
-      if (!d){ delete this.mem[k]; return null; }
-      return 'data:image/jpeg;base64,' + d.b64;
-    })();
-  },
-  async available(){ return !!(await this.get(27)); }
-};
-/* رمز صفحات الكتاب يصل مرة واحدة عبر الرابط (?book=...) ثم يُحفظ في إعدادات العائلة فيصل لكل الأجهزة */
-function captureBookCode(){
-  try{ const u = new URL(location.href); const b = (u.searchParams.get('book') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (b.length >= 10){ localStorage.setItem('lg_book', b); u.searchParams.delete('book'); history.replaceState(null, '', u.pathname + u.search + u.hash); } }catch(e){}
-}
-async function applyBookCode(){
-  let b = ''; try{ b = localStorage.getItem('lg_book') || ''; }catch(e){}
-  if (!b || !S.settings || !S.settings.pinHash) return false;
-  if (S.settings.bookCode === b) return false;
-  S.settings.bookCode = b; BookPages.mem = {}; await Store.set('settings', S.settings); return true;
-}
-
-/* ---------- نقل نتائج التمارين المؤلَّفة السابقة إلى مفاتيح x- (مرة واحدة) ---------- */
-function xKeyOf(k){ return (!isX(k) && /^(u\d(l\d)?|intro|lib)(\/|$)/.test(k)) ? XP + k : k; }
-function migrateToBookKeys(save = true){
-  const P = Progress.ensure(); if (P.xmig) return false;
-  for (const fld of ['stars', 'best']){ const o = P[fld] || {}; const n = {}; for (const [k, v] of Object.entries(o)) n[xKeyOf(k)] = v; P[fld] = n; }
-  P.xmig = 1;
-  if (S.child && save){ for (const p of (S.child.pending || [])) if (p.station) p.station = xKeyOf(p.station); }
-  return true;
-}
-
-/* على لوحة بابا: تطبيع ما يصل من جهاز الطفلة إن لم يكن قد حدّث نفسه بعد (في الذاكرة فقط، بلا حفظ) */
-let _remoteMig = true;
-function normProgressFromRemote(){ if (!S.progress) return; Progress.ensure(); _remoteMig = !!S.progress.xmig; if (!_remoteMig) migrateToBookKeys(false); }
-function normChildFromRemote(){ if (!S.child || _remoteMig) return; for (const p of (S.child.pending || [])) if (p.station && !p.book) p.station = xKeyOf(p.station); }
-
-/* ---------- عارض الصفحات داخل المحطة (صفحة واحدة في كل مرة + تنقّل) ---------- */
-function bookPad({ pages, path, label, write, lines = 0 }){
-  let i = 0, pad = null, busy = false; const counts = {}; const ids = [];
-  const host = h('div', { class: 'bk-host' }); const nav = h('div', { class: 'bk-nav' });
-  function drawNav(){
-    const many = pages.length > 1;
-    nav.replaceChildren(...kids(
-      many ? h('button', { class: 'btn btn-sm', disabled: i === 0 ? '' : null, onclick: () => show(i - 1) }, '→ السَّابِقَةُ') : null,
-      h('span', { class: 'pg' }, `📖 ص ${toAr(pages[i])}` + (many ? ` (${toAr(i + 1)} مِنْ ${toAr(pages.length)})` : '')),
-      many ? h('button', { class: 'btn btn-sm btn-primary', id: 'bk-next', disabled: i === pages.length - 1 ? '' : null, onclick: () => show(i + 1) }, 'التَّالِيَةُ ←') : null));
-  }
-  async function show(j){
-    if (busy || j < 0 || j >= pages.length) return; busy = true;
-    try{
-      if (pad){ try{ await pad.flush(); }catch(e){} counts[pages[i]] = pad.count(); pad.destroy(); pad = null; }
-      i = j; const p = pages[i]; const has = !!(await BookPages.get(p));
-      const id = (has ? (lines ? 'bk/h' : 'bk/p') : 'bk/f') + p; if (!ids.includes(id)) ids.push(id);
-      const spec = has ? (lines ? [{ t: 'page', p }, { t: 'note', x: 'اكْتُبِي هُنَا كَمَا تَكْتُبِينَ فِي دَفْتَرِكِ:' }, { t: 'lines', n: lines }] : [{ t: 'page', p }])
-                       : (write ? [{ t: 'page', p, r: 0.34 }, { t: 'lines', n: Math.max(4, lines) }] : [{ t: 'page', p, r: 0.45 }]);
-      pad = Ink.open({ id, spec, path, label: `${label} — ص ${toAr(p)}`, page: toAr(p) });
-      host.replaceChildren(pad.el); drawNav();
-      const cur = pad; cur.ready.then(() => { counts[p] = cur.count(); }).catch(() => {});
-    } finally { busy = false; }
-  }
-  const el = h('div', { class: 'bk' }, nav, host);
-  const first = show(0);
-  return { el, first, ids: () => ids.slice(), page: () => pages[i],
-    total(){ if (pad) counts[pages[i]] = pad.count(); return Object.values(counts).reduce((a, b) => a + b, 0); },
-    isPen: () => !!(pad && pad.isPen()),
-    async flush(){ if (pad){ try{ await pad.flush(); }catch(e){} counts[pages[i]] = pad.count(); } },
-    destroy(){ if (pad){ pad.destroy(); pad = null; } } };
-}
-/* يرسل صفحات محلولة إلى بابا للتصحيح (يحدّث الطلب السابق لنفس المحطة إن لم يُقيَّم بعد) */
-async function bookSubmit({ ids, station, lesson, title, skill, pen, n, page }){
-  Child.ensure(); const old = S.child.pending.find(p => p.type === 'ink' && p.station === station && p.status === 'pending');
-  if (old){ old.ts = Date.now(); old.pen = !!pen; old.n = n; old.ink = ids[0]; old.inks = ids; return Child.save(); }
-  return Child.addPending({ type: 'ink', station, lesson: lesson || '', title: title || '', ink: ids[0], inks: ids, key: '', skill: skill || '', pen: !!pen, n: n || 0, page: page || null, book: 1 });
-}
-
-/* ---------- محطة من الكتاب ----------
-   o = {path, pages, title, icon, mode:'read'|'write'|'view', kind, skill, lesson, back, next:{label, run}} */
-async function runBook(o){
-  const path = o.path; Log.ev({ k: 'station_start', s: path });
-  const g = makeGame(`${o.icon || '📖'} ${o.title}`); g.setSrc(path);
-  let r; try{ r = o.mode === 'read' ? await bookRead(g, o) : await bookWrite(g, o); }catch(e){ console.error(e); toast('حَدَثَ خَطَأٌ، ارْجِعِي وَجَرِّبِي مَرَّةً ثَانِيَةً'); }
-  if (!r || r.aborted){ if (!(r && r.quiet)) Log.ev({ k: 'station_abort', s: path }); return o.back(); }
-  const act = await finishStation(g, Object.assign({ path, skill: o.skill || null, next: o.next ? o.next.label : null }, r));
-  if (act === 'next' && o.next) return o.next.run();
-  o.back();
-}
-/* قراءة جهرية من صفحة الكتاب مع تسجيل الصوت ثم تقييم بابا */
-async function bookRead(g, o){
-  const nas = o.kind === 'nasheed';
-  const pad = bookPad({ pages: o.pages, path: o.path, label: o.title, write: false }); await pad.first;
-  const tip = o.tip || (nas ? '🎵 أَنْشِدِي النَّشِيدَ مِنْ صَفْحَةِ كِتَابِكِ بِصَوْتٍ جَمِيلٍ. اضْغَطِي «بَدَأْتُ» لِيُسَجَّلَ صَوْتُكِ لِبَابَا.'
-                           : '🗣️ اقْرَئِي مِنْ صَفْحَةِ كِتَابِكِ بِصَوْتٍ عَالٍ. اضْغَطِي «بَدَأْتُ» لِيُسَجَّلَ صَوْتُكِ لِبَابَا.');
-  let rd, n = 0, ids = [], pen = false;
-  try{ rd = await readAloudFlow(g, { sents: [], path: o.path, hard: [], intro: tip, boxEl: pad.el }); }
-  finally { await pad.flush(); n = pad.total(); ids = pad.ids(); pen = pad.isPen(); pad.destroy(); }
-  if (rd.aborted) return rd;
-  const { ms, rec } = rd; Log.ev({ k: 'read_end', s: o.path, ms, rec: !!rec, book: 1 });
-  const approval = await approvalStep(g, { title: o.doneTitle || (nas ? 'أَنْشَدْتِ النَّشِيدَ!' : 'قَرَأْتِ مِنْ كِتَابِكِ!'), ms, rec, pinTitle: nas ? 'بَابَا يُدْخِلُ رَمْزَهُ لِيُقَيِّمَ الْإِنْشَادَ 🔐' : undefined });
-  if (approval.aborted) return approval;
-  const audio = rec ? await Rec.save(rec, { path: o.path, kind: nas ? 'nasheed' : 'read', text: stripT(N(o.title)) }) : null;
-  if (approval.pending){
-    await Child.addPending({ type: nas ? 'nasheed' : 'read', station: o.path, lesson: o.lesson || '', title: N(o.title), ms, audio: audio ? audio.id : null, audioType: audio ? audio.type : null, page: fmtPages(o.pages), inks: n > 0 ? ids : null, pen, skill: o.skill || '', book: 1 });
-    return { acc: 0, ms, pending: true, extra: { rec: !!audio } };
-  }
-  Log.ev({ k: 'read_rated', s: o.path, rating: approval.rating, notes: approval.notes });
-  return { acc: approval.rating / 3, ms, stars: approval.rating, extra: { notes: approval.notes, rec: !!audio }, total: 1 };
-}
-/* حل صفحة الكتاب بالقلم (أو الاطلاع عليها فقط في mode:'view') */
-async function bookWrite(g, o){
-  const t0 = Date.now(); const view = o.mode === 'view'; const min = view ? 0 : (o.min === undefined ? 2 : o.min);
-  const pad = bookPad({ pages: o.pages, path: o.path, label: o.title, write: !view, lines: o.lines || 0 }); await pad.first;
-  const res = await new Promise(done => {
-    const finish = async r => { g.abortCurrent = null; await pad.flush(); const out = Object.assign({ n: pad.total(), pen: pad.isPen(), ids: pad.ids() }, r || {}); pad.destroy(); done(out); };
-    g.abortCurrent = r => finish(r);
-    g.body.replaceChildren(h('div', { class: 'card sand small' }, view ? '📖 اقْرَئِي الصَّفْحَةَ مَعَ بَابَا أَوْ مَامَا، ثُمَّ اضْغَطِي ✅.' : '✏️ حُلِّي فِي صَفْحَةِ كِتَابِكِ بِالْقَلَمِ. كُلُّ مَا تَكْتُبِينَهُ يُحْفَظُ وَيَصِلُ إِلَى بَابَا.'), pad.el);
-    g.foot.replaceChildren(h('button', { class: 'btn btn-green', id: 'ink-done', onclick: () => { if (pad.total() < min) return toast('اكْتُبِي فِي الصَّفْحَةِ أَوَّلًا ✏️'); finish({ ok: true }); } }, view ? 'قَرَأْتُهَا ✅' : '✅ خَلَصْتُ — أَرْسِلِي لِبَابَا'));
-  });
-  if (res.aborted) return res;
-  const ms = Date.now() - t0;
-  if (view || res.n < 1) return { acc: 1, ms, stars: 1, simple: true };
-  Log.ev({ k: 'ink', s: o.path, id: res.ids[0], n: res.n, pen: res.pen, book: 1 });
-  await bookSubmit({ ids: res.ids, station: o.path, lesson: o.lesson || '', title: `${stripT(N(o.title))} — ص ${fmtPages(o.pages)}`, skill: o.skill || '', pen: res.pen, n: res.n, page: fmtPages(o.pages) });
-  return { acc: 0, ms, pending: true, pendingMsgs: ['أَرْسَلْتُ صَفْحَتَكِ لِبَابَا 📨', 'بَابَا سَيُصَحِّحُهَا وَيُعْطِيكِ النُّجُومَ.'] };
-}
-
-/* ---------- تشغيل محطات الكتاب ---------- */
-function runBookStation(u, l, key){
-  const defs = lessonStations(l); const i = defs.findIndex(d => d.key === key); const d = defs[i]; if (!d) return go('lesson', l.key); const nxt = defs[i + 1];
-  return runBook({ path: `${l.key}/${d.key}`, pages: d.pages, title: `${d.title} — ${bookTitle(l)}`, icon: d.icon, mode: d.mode, tip: d.tip, doneTitle: d.doneTitle, lines: d.lines || 0, skill: stationSkill(d, l), lesson: l.key,
-    back: () => go('lesson', l.key), next: nxt ? { label: `التَّالِي: ${nxt.title} ${nxt.icon}`, run: () => runStation(u, l, nxt.key) } : null });
-}
-function runBookBlock(u, b){
-  return runBook({ path: b.path, pages: BK.units[u.key][b.key], title: `${b.title} — ${u.title}`, icon: b.icon, mode: b.mode, kind: b.kind, min: b.key === 'listen' ? 0 : undefined, skill: b.skill || null, back: () => go('unit', u.key) });
-}
-function runBookIntro(s){ return runBook({ path: 'intro/' + s.key, pages: s.pages, title: s.title, icon: s.icon, mode: s.mode, skill: s.key === 'khat' ? 'khat' : null, back: () => go('intro') }); }
-function runBookLib(s){ return runBook({ path: 'lib/' + s.key, pages: s.pages, title: `أَنَا أَقْرَأُ: ${s.title}`, icon: s.icon, mode: 'read', skill: 'read', back: () => go('library') }); }
-
-/* ---------- شاشات الكتاب ---------- */
-function bookMissingBanner(){
-  if (BookPages.code()) return null;
-  return h('div', { class: 'banner' }, '📘 صَفَحَاتُ الْكِتَابِ لَمْ تُضَفْ لِهَذِهِ الْعَائِلَةِ بَعْدُ. (لبابا: افتح رابط الكتاب مرة واحدة، أو أضف رمزه من لوحتك ← الإعدادات.) إلى ذلك الحين تُفتح الصفحات من الكتاب الورقي.');
-}
-function renderUnitBook(u){
-  Child.ensure(); const isPend = path => S.child.pending.some(p => p.station === path && p.status === 'pending');
-  const nodes = bookUnitBlocks(u).map(b => {
-    if (b.lesson){ const defs = lessonStations(b.lesson); const dn = lessonDone(b.lesson); return node({ icon: b.icon, title: b.title, sub: `${dn} مِنْ ${defs.length}`, stars: `${blockStars(u, b)} ⭐`, done: dn === defs.length, onclick: () => enterLesson(u, b.lesson), path: b.path }); }
-    const st = Progress.stars(b.path); const pend = isPend(b.path);
-    return node({ icon: b.icon, title: b.title, sub: pend ? '⏳ فِي انْتِظَارِ بَابَا' : b.sub, stars: b.mode === 'view' ? undefined : st, done: st > 0, badge: pend ? '⏳' : null, onclick: () => runBookBlock(u, b), path: b.path });
-  });
-  const xu = xUnit(u);
-  const ex = node({ icon: '🧩', title: 'تَمْرِين', sub: 'تَمَارِينُ إِضَافِيَّةٌ تُنَاسِبُ الْوَحْدَةَ (لَيْسَتْ مِنَ الْكِتَابِ)', stars: `${unitStars(xu)} ⭐`, onclick: () => go('unit', xu.key), lamp: null }); ex.classList.add('ex'); ex.id = 'open-ex';
-  mount(h('div', { class: 'screen' },
-    h('div', { class: 'topbar' }, h('button', { class: 'icon-btn', onclick: () => go('home'), 'aria-label': 'رجوع' }, '→'), h('h2', { style: 'flex:1' }, u.icon, ' ', u.title), h('span', { class: 'chip stars' }, '⭐ ', h('span', { class: 'num' }, unitStars(u)), '/', unitMax(u))),
-    h('div', { class: 'card sand' }, h('p', { class: 'small' }, '📖 هَذِهِ الْوَحْدَةُ مِنْ كِتَابِكِ: الصَّفَحَات ', pageOf(u.key), ' — بِنَفْسِ تَرْتِيبِ الْكِتَابِ. اقْرَئِي وَحُلِّي فِي صَفْحَةِ الْكِتَابِ نَفْسِهَا.')),
-    bookMissingBanner(),
-    h('div', { class: 'trail' }, ...nodes, ex)));
-}
-function renderLessonBook(u, l){
-  Child.ensure(); const defs = lessonStations(l); const isPend = path => S.child.pending.some(p => p.station === path && p.status === 'pending');
-  const nodes = defs.map((d, i) => { const path = `${l.key}/${d.key}`; const st = Progress.stars(path); const pend = isPend(path);
-    return node({ icon: d.icon, title: `${i + 1}. ${d.title}`, sub: pend ? '⏳ فِي انْتِظَارِ بَابَا' : d.sub, stars: st, done: st > 0, badge: pend ? '⏳' : null, onclick: () => runStation(u, l, d.key), path }); });
-  const first = defs.find(d => Progress.stars(`${l.key}/${d.key}`) === 0 && !isPend(`${l.key}/${d.key}`));
-  mount(h('div', { class: 'screen' },
-    h('div', { class: 'topbar' }, h('button', { class: 'icon-btn', onclick: () => go('unit', u.key), 'aria-label': 'رجوع' }, '→'), h('h2', { style: 'flex:1' }, l.emoji, ' ', bookTitle(l)), h('span', { class: 'chip stars' }, '⭐ ', h('span', { class: 'num' }, lessonStars(l)), '/', defs.length * 3)),
-    h('p', { class: 'tiny', style: 'text-align:center' }, '📖 هَذَا الدَّرْسُ مِنْ كِتَابِكِ: الصَّفَحَات ', fmtPages(bookPagesOf(l.key)), ' — بِنَفْسِ تَرْتِيبِ الْكِتَابِ'),
-    bookMissingBanner(),
-    first ? h('button', { class: 'btn btn-primary', onclick: () => runStation(u, l, first.key) }, `ابْدَئِي: ${first.title} ${first.icon}`) : h('div', { class: 'banner ok' }, '🎉 أَكْمَلْتِ كُلَّ صَفَحَاتِ هَذَا الدَّرْسِ!'),
-    h('div', { class: 'trail' }, ...nodes)));
-}
-const bookIntroStars = () => BK.intro.reduce((a, s) => a + Progress.stars('intro/' + s.key), 0);
-const bookLibStars = () => BK.lib.reduce((a, s) => a + Progress.stars('lib/' + s.key), 0);
-function exNode(sub, stars, onclick){ const n = node({ icon: '🧩', title: 'تَمْرِين', sub, stars: `${stars} ⭐`, onclick, lamp: null }); n.classList.add('ex'); n.id = 'open-ex'; return n; }
-function renderIntroBook(){
-  Child.ensure(); const isPend = path => S.child.pending.some(p => p.station === path && p.status === 'pending');
-  mount(h('div', { class: 'screen' },
-    h('div', { class: 'topbar' }, h('button', { class: 'icon-btn', onclick: () => go('home'), 'aria-label': 'رجوع' }, '→'), h('h2', { style: 'flex:1' }, '🔤 مُرَاجَعَةُ مُكْتَسَبَاتِي السَّابِقَةِ'), h('span', { class: 'chip stars' }, '⭐ ', h('span', { class: 'num' }, bookIntroStars()), '/', BK.intro.length * 3)),
-    h('div', { class: 'card sand' }, h('p', { class: 'small' }, '📖 مِنْ كِتَابِكِ: الصَّفَحَات ٧–١٦. اقْرَئِي وَحُلِّي فِي صَفْحَةِ الْكِتَابِ نَفْسِهَا.')),
-    bookMissingBanner(),
-    h('div', { class: 'trail' }, ...BK.intro.map(s => { const path = 'intro/' + s.key; const st = Progress.stars(path); const pend = isPend(path); return node({ icon: s.icon, title: s.title, sub: pend ? '⏳ فِي انْتِظَارِ بَابَا' : null, stars: st, done: st > 0, badge: pend ? '⏳' : null, onclick: () => runBookIntro(s), path }); }),
-      exNode('أَلْعَابٌ إِضَافِيَّةٌ لِلْمُرَاجَعَةِ (لَيْسَتْ مِنَ الْكِتَابِ)', introStars(), () => go('xintro')))));
-}
-function renderLibraryBook(){
-  Child.ensure(); const isPend = path => S.child.pending.some(p => p.station === path && p.status === 'pending');
-  mount(h('div', { class: 'screen' },
-    h('div', { class: 'topbar' }, h('button', { class: 'icon-btn', onclick: () => go('home'), 'aria-label': 'رجوع' }, '→'), h('h2', { style: 'flex:1' }, '📚 أَنَا أَقْرَأُ'), h('span', { class: 'chip stars' }, '⭐ ', h('span', { class: 'num' }, bookLibStars()), '/', BK.lib.length * 3)),
-    h('div', { class: 'card sand' }, h('p', { class: 'small' }, '📖 مُلْحَقُ كِتَابِكِ: الصَّفَحَات ١٥١–١٦٠. اقْرَئِي النَّصَّ مِنْ صَفْحَةِ الْكِتَابِ بِصَوْتٍ عَالٍ.')),
-    bookMissingBanner(),
-    h('div', { class: 'trail' }, ...BK.lib.map(s => { const path = 'lib/' + s.key; const st = Progress.stars(path); const pend = isPend(path); return node({ icon: s.icon, title: s.title, sub: pend ? '⏳ فِي انْتِظَارِ بَابَا' : null, stars: st, done: st > 0, badge: pend ? '⏳' : null, onclick: () => runBookLib(s), path }); }),
-      exNode('قِصَصٌ إِضَافِيَّةٌ وَأَسْئِلَةٌ (لَيْسَتْ مِنَ الْكِتَابِ)', xLibStars(), () => go('xlibrary')))));
-}
-const xLibStars = () => CONTENT.library.reduce((a, s) => a + Progress.stars('x-lib/' + s.key), 0);
 
 /* ===================== الإعداد الأول ===================== */
 function renderSetup(){
@@ -3867,16 +3527,17 @@ const WEEK12_PRESET = {
 };
 /* كل أهداف الخطة بترتيب صفحات الكتاب، مع رقم الصفحة في الاسم */
 function allTargets(){
-  const out=[]; const pg=path=>{ const p=pageOf(path); return p? ` (ص ${p})` : ''; };
-  BK.intro.forEach(st=>out.push({path:'intro/'+st.key, group:'مراجعة مكتسباتي السابقة (ص ٧–١٦)', label:stripT(st.title)+pg('intro/'+st.key)}));
+  const out=[]; const pg=path=>{ const p=pageOf(path); return p? ` (ص ${p})` : ' (إضافي)'; };
+  CONTENT.intro.games.forEach(g=>out.push({path:'intro/'+g.key, group:'مراجعة مكتسباتي (ص ٧–١٦)', label:g.title+pg('intro/'+g.key)}));
   for (const u of CONTENT.units){
     const grp=`${u.title} (ص ${pageOf(u.key)})`;
     for (const b of unitBlocks(u)){
-      if (b.lesson){ for (const d of lessonStations(b.lesson)) out.push({path:`${b.lesson.key}/${d.key}`, group:grp, label:`${stripT(bookTitle(b.lesson))} › ${stripT(d.title)}${pg(`${b.lesson.key}/${d.key}`)}`}); continue; }
-      out.push({path:b.path, group:grp, label:stripT(b.title)+(b.key==='nasheed'&&b.sub? ': '+stripT(b.sub):'')+pg(b.path)});
+      if (b.lesson){ for (const d of STATION_DEFS) out.push({path:`${b.lesson.key}/${d.key}`, group:grp, label:`${b.lesson.title} › ${d.title}${pg(`${b.lesson.key}/${d.key}`)}`}); continue; }
+      if (b.task==='extra'){ out.push({path:`${u.key}/task`, group:grp, label:'مهام مع بابا (الكل)'}); continue; }
+      out.push({path:b.path, group:grp, label:(b.key==='boss'?'تحدي الوحدة (التقويم التجميعي)': b.key==='listen'? 'نص الاستماع: '+u.listening.title : b.key==='nasheed'? 'النشيد: '+u.nasheed.title : b.title)+pg(b.path)});
     }
   }
-  BK.lib.forEach(st=>out.push({path:'lib/'+st.key, group:'أنا أقرأ — ملحق الكتاب (ص ١٥١–١٦٠)', label:stripT(st.title)+pg('lib/'+st.key)}));
+  CONTENT.library.forEach(s=>out.push({path:'lib/'+s.key, group:'مكتبة الصقر (ص ١٥١–١٦٠)', label:s.title+pg('lib/'+s.key)}));
   out.push({path:'review', group:'عام', label:'صندوق الأخطاء'});
   return out;
 }
@@ -3906,16 +3567,13 @@ let _sessions=null, _unsubP=[];
 function stationName(path){
   if(!path) return '';
   if(path==='review') return 'صندوق الأخطاء';
-  const [a,b,c]=path.split('/'); const X=isX(a)? 'تمرين › ' : '';
-  if(a==='intro') return 'مراجعة مكتسباتي: '+stripT((BK.intro.find(x=>x.key===b)||{}).title||b||'');
-  if(a==='x-intro') return X+'مراجعة: '+((CONTENT.intro.games.find(g=>g.key===b)||{}).title||b);
-  if(a==='lib') return 'أنا أقرأ: '+stripT((BK.lib.find(x=>x.key===b)||{}).title||b||'');
-  if(a==='x-lib') return X+'قصة: '+((CONTENT.library.find(x=>x.key===b)||{}).title||b);
+  const [a,b,c]=path.split('/');
+  if(a==='intro') return 'مراجعة: '+((CONTENT.intro.games.find(g=>g.key===b)||{}).title||b);
+  if(a==='lib') return 'مكتبة: '+((CONTENT.library.find(s=>s.key===b)||{}).title||b);
   const f=findLesson(a);
-  if(f){ const d=lessonStations(f.lesson).find(x=>x.key===b); return X+`${bookTitle(f.lesson)} › ${d?d.title:(b||'')}`; }
-  const u=findUnit(a);
-  if(u && !u.isX){ const blk=bookUnitBlocks(u).find(x=>x.key===b); return `${u.title} › ${blk? blk.title : (b||'')}`; }
-  if(u){ const names={warmup:'لعبة التهيئة',listen:'قصة أسمعها',nasheed:'نشيد',boss:'تحدي الوحدة',task:'مهمة مع بابا',verse:'آية كريمة',guide:'ماذا سنتعلم'}; const t=c? unitTasks(u).find(x=>x.key===c):null; return X+`${u.title} › ${t? t.title : (names[b]||b||'')}${t?' ('+N(t.text)+')':''}`; }
+  if(f){ const d=STATION_DEFS.find(x=>x.key===b); return `${f.lesson.title} › ${d?d.title:b}`; }
+  const u=CONTENT.units.find(x=>x.key===a);
+  if(u){ const names={warmup:'التهيئة',listen:'نص الاستماع',nasheed:'النشيد',boss:'تحدي الوحدة (التقويم التجميعي)',task:'مهمة مع بابا',verse:'آية كريمة (مدخل الوحدة)',guide:'دليل الوحدة'}; const t=c? unitTasks(u).find(x=>x.key===c):null; return `${u.title} › ${t? t.title : (names[b]||b)}${t?' ('+N(t.text)+')':''}`; }
   return path;
 }
 function skillName(k){ return (CONTENT.skills[k]||{}).name||k||''; }
@@ -3952,8 +3610,8 @@ function renderParent(tab='hub'){
   (async()=>{
     if (!_sessions || tab==='today' || tab==='hub') _sessions = await Store.listSessions(60);
     if (S.mode==='db' && !_unsubP.length){
-      _unsubP.push(Store.subscribe('child', d=>{ if(d){ S.child=d; normChildFromRemote(); if(S.screen==='parent' && ['approvals','messages','hub'].includes(S.nav[0])) renderParent(S.nav[0]); } }));
-      _unsubP.push(Store.subscribe('progress', d=>{ if(d){ S.progress=d; normProgressFromRemote(); normChildFromRemote(); } }));
+      _unsubP.push(Store.subscribe('child', d=>{ if(d){ S.child=d; restoreClassicKeys(); if(S.screen==='parent' && ['approvals','messages','hub'].includes(S.nav[0])) renderParent(S.nav[0]); } }));
+      _unsubP.push(Store.subscribe('progress', d=>{ if(d){ S.progress=d; restoreClassicKeys(); } }));
     }
     if (tab==='messages'){ Parent.ensure(); S.parent.seenNotes=S.parent.seenNotes||{}; let ch=false; for(const n of S.child.notes){ if(!S.parent.seenNotes[n.id]){ S.parent.seenNotes[n.id]=Date.now(); ch=true; } } if(ch) Parent.save(); }
     body.replaceChildren(...kids(({hub:tabHub, today:tabToday, plan:tabPlan, progress:tabProgress, mistakes:tabMistakes, approvals:tabApprovals, messages:tabMessages, settings:tabSettings, review:tabReview}[tab]||tabHub)()));
@@ -4007,7 +3665,7 @@ function tabToday(){
     return h('div',{class:'tl-item'}, h('div',{class:'t'}, `${fmtClock(st.t-(st.ms||0))}–${fmtClock(st.t)}`),
       h('div',{class:'b'}, h('b',{}, stationName(st.s), h('span',{class:'tiny', style:'font-weight:500'}, ' · 📖 ', srcOf(st.s))),
         h('span',{class:'small'}, st.pending? h('span',{class:'pill warn'},'⏳ بانتظار اعتمادك') : h('span',{class:'st'}, starsTxt(st.stars||0)), ` · ${fmtMs(st.ms||0)}`, st.acc!==undefined && !st.pending? ` · دقة ${st.acc}٪`:'' ,
-          reads.length? (reads[0].wpm? ` · قراءة ${reads[0].wpm} كلمة/د` : ' · قراءة من صفحة الكتاب'):'' , khat? (khat.ink? ' · خط بالقلم' : ` · خط ${khat.score}/100`):''),
+          reads.length? ` · قراءة ${reads[0].wpm} كلمة/د`:'' , khat? (khat.ink? ' · خط بالقلم' : ` · خط ${khat.score}/100`):''),
         (answers.length||taps.length) ? h('details',{}, h('summary',{}, `التفاصيل (${answers.length} إجابة${taps.length?`، ${taps.length} كلمة سمعتها`:''})`),
           ...answers.map(a=>h('div',{class:'ev'}, h('span',{class:a.ok?'ok':'bad'}, a.ok?'✓':'✗'), h('span',{}, a.it||''), a.ans? h('span',{class:'muted'}, '← ', a.ans):null, h('span',{class:'muted'}, `${a.tries?a.tries+' محاولة خاطئة · ':''}${Math.round((a.ms||0)/1000)} ث${a.hint?' · استخدمت التلميح':''}`))),
           taps.length? h('div',{class:'ev'}, '🔊 كلمات ضغطتها لتسمعها: ', taps.join('، ')):null) : null,
@@ -4063,7 +3721,7 @@ function actLine(e){
     case 'hint':  return row('sys','🔎','طلبت تلميحًا', e.it? h('span',{class:'muted'},' في: '+e.it):'');
     case 'tts':   return row('sys','🔊','سمعت: ', h('span',{class:'muted'}, e.txt||''));
     case 'word_tap': return row('sys','👆🔊','ضغطت كلمة لتسمعها: ', h('span',{class:'muted'}, e.w||''));
-    case 'read_end': return row('ok','📖','قرأت بصوت عالٍ', h('span',{class:'muted'}, ` · ${e.wpm? e.wpm+' كلمة/دقيقة · ':''}${fmtMs(e.ms||0)}${e.rec?' · سجّلت صوتها':''}`));
+    case 'read_end': return row('ok','📖','قرأت بصوت عالٍ', h('span',{class:'muted'}, ` · ${e.wpm||0} كلمة/دقيقة · ${fmtMs(e.ms||0)}${e.rec?' · سجّلت صوتها':''}`));
     case 'nasheed_play': return row('sys','🎵','شغّلت النشيد', e.rate&&e.rate<1? h('span',{class:'muted'},' (بطيء)'):'');
     case 'khat':  return row('ok','✍️','كتبت بخطها', h('span',{class:'muted'}, e.ink? ` · ${e.pen?'بالقلم':'بالإصبع'} · بانتظار تقييمك` : ` · التقييم ${e.score||0}/100`));
     case 'rec':   return row('ok','🎙️','سجّلت صوتها', e.ms? h('span',{class:'muted'}, ` · ${fmtMs(e.ms)}`):'');
@@ -4101,8 +3759,8 @@ function buildInsights(){
 /* ---------- التقدم ---------- */
 function tabProgress(){
   const p=Progress.ensure(); Child.ensure();
-  const unitRows=CONTENT.units.map(u=>h('tr',{}, h('td',{}, u.icon,' ',u.title), h('td',{class:'num'}, `${lessonStars(u.lessons[0])}/${lessonStations(u.lessons[0]).length*3}`), h('td',{class:'num'}, `${lessonStars(u.lessons[1])}/${lessonStations(u.lessons[1]).length*3}`), h('td',{class:'num'}, starsTxt(Progress.stars(u.key+'/boss'))), h('td',{class:'num'}, `${unitStars(u)}/${unitMax(u)}`)));
-  const lessonDetail=CONTENT.units.flatMap(u=>u.lessons.map(l=>h('div',{class:'card'}, h('h3',{}, l.emoji,' ',bookTitle(l)), h('div',{class:'row', style:'gap:6px'}, ...lessonStations(l).map(d=>{ const st=Progress.stars(`${l.key}/${d.key}`); return h('span',{class:'pill '+(st===3?'ok':st===2?'warn':st===1?'bad':''), title:d.title}, d.icon,' ',st?starsTxt(st):'—'); })))));
+  const unitRows=CONTENT.units.map(u=>h('tr',{}, h('td',{}, u.icon,' ',u.title), h('td',{class:'num'}, `${lessonStars(u.lessons[0])}/${STATION_DEFS.length*3}`), h('td',{class:'num'}, `${lessonStars(u.lessons[1])}/${STATION_DEFS.length*3}`), h('td',{class:'num'}, starsTxt(Progress.stars(u.key+'/boss'))), h('td',{class:'num'}, `${unitStars(u)}/${unitMax(u)}`)));
+  const lessonDetail=CONTENT.units.flatMap(u=>u.lessons.map(l=>h('div',{class:'card'}, h('h3',{}, l.emoji,' ',l.title), h('div',{class:'row', style:'gap:6px'}, ...STATION_DEFS.map(d=>{ const st=Progress.stars(`${l.key}/${d.key}`); return h('span',{class:'pill '+(st===3?'ok':st===2?'warn':st===1?'bad':''), title:d.title}, d.icon,' ',st?starsTxt(st):'—'); })))));
   const skills=Object.entries(p.skills||{}).map(([k,s])=>({k, acc:s.total?Math.round(100*s.ok/s.total):0, level:s.level||2, total:s.total, ok:s.ok||0, help:s.help||0, shown:s.shown||0})).sort((a,b)=>a.acc-b.acc);
   const bars=skills.length? skills.map(s=>h('div',{class:'bar'}, h('span',{}, skillName(s.k), h('span',{class:'tiny'}, ` · مستقلة ${s.ok} · بمساعدة ${s.help} · كُشف ${s.shown}${s.total-s.ok-s.help-s.shown>0? ' · قديمة غير مصنّفة '+(s.total-s.ok-s.help-s.shown):''}`)), h('div',{class:'trk'}, h('i',{class: s.acc>=80?'':s.acc>=60?'mid':'low', style:`width:${s.acc}%`})), h('span',{class:'pct'}, `${s.acc}%`))) : [h('div',{class:'empty'},'ما فيه بيانات مهارات بعد.')];
   const rd=(p.reading||[]).slice(-8);
@@ -4142,11 +3800,10 @@ function tabApprovals(){
   const confirmBtn=(p)=>h('button',{class:'btn btn-sm btn-green', onclick:async()=>{ S.parent.taskConfirms[p.id]=Date.now(); await Parent.save(); toast('اعتمدت المهمة ✅'); renderParent('approvals'); }},'✅ أعتمد المهمة (٣ نجوم)');
   const card=(p, done)=>h('div',{class:'card'}, h('div',{class:'row between'}, h('b',{}, p.type==='ink'?'✍️ كتابة بالقلم — '+(p.title||''): p.type==='read'?'📖 قراءة جهرية': p.type==='nasheed'?'🎵 تسميع نشيد': p.type==='hw'?'📓 واجب منزلي من الكتاب':'🏡 مهمة واقعية'), h('span',{class:'tiny'}, `${fmtDay(dayKey(p.ts))} ${fmtClock(p.ts)}`)),
     h('p',{class:'small'}, stationName(p.station), p.station? h('span',{class:'tiny'}, ' · 📖 ', srcOf(p.station)):null), p.text? h('p',{class:'small'}, p.text):null,
-    p.type==='read'? h('p',{class:'small'}, p.book? `الوقت ${fmtMs(p.ms||0)} · من صفحة الكتاب ${p.page||''}` : `الوقت ${fmtMs(p.ms||0)} · ${p.wpm||0} كلمة/دقيقة · ${p.words||0} كلمة`, p.hard&&p.hard.length? h('span',{}, ` · كلمات سمعتها: ${p.hard.join('، ')}`):null):null,
-    p.type==='ink'? h('div',{class:'stack work-card', style:'gap:4px'}, h('p',{class:'tiny'}, p.pen?'✏️ كتبت بقلم الآيباد':'☝️ كتبت بالإصبع (بدون قلم)', ` · ${p.n||0} خطًّا`), (p.inkGone||isDeleted(p.ink))? h('p',{class:'tiny'},'(حُذفت الكتابة)') : (p.inks&&p.inks.length? p.inks.map(id=>Ink.viewer(id)) : Ink.viewer(p.ink)), p.key? h('p',{class:'small', style:'white-space:pre-line;background:var(--ok-bg,#EAF7E8);border-radius:10px;padding:6px 10px'}, h('b',{},'مفتاح التصحيح: '), p.key):null, done?null:h('p',{class:'tiny'},'٣ نجوم = صحيحة ومستقلة · نجمتان = أخطاء بسيطة · نجمة = تحتاج إعادة')) :
+    p.type==='read'? h('p',{class:'small'}, `الوقت ${fmtMs(p.ms||0)} · ${p.wpm||0} كلمة/دقيقة · ${p.words||0} كلمة`, p.hard&&p.hard.length? h('span',{}, ` · كلمات سمعتها: ${p.hard.join('، ')}`):null):null,
+    p.type==='ink'? h('div',{class:'stack work-card', style:'gap:4px'}, h('p',{class:'tiny'}, p.pen?'✏️ كتبت بقلم الآيباد':'☝️ كتبت بالإصبع (بدون قلم)', ` · ${p.n||0} خطًّا`), (p.inkGone||isDeleted(p.ink))? h('p',{class:'tiny'},'(حُذفت الكتابة)') : Ink.viewer(p.ink), p.key? h('p',{class:'small', style:'white-space:pre-line;background:var(--ok-bg,#EAF7E8);border-radius:10px;padding:6px 10px'}, h('b',{},'مفتاح التصحيح: '), p.key):null, done?null:h('p',{class:'tiny'},'٣ نجوم = صحيحة ومستقلة · نجمتان = أخطاء بسيطة · نجمة = تحتاج إعادة')) :
     p.audio && !isDeleted(p.audio)? h('div',{class:'stack', style:'gap:4px'}, h('p',{class:'tiny'},'🎙️ تسجيل صوتها — اسمعه ثم قيّم:'), audioEl(p.audio)) : (p.type==='read'||p.type==='nasheed')? h('p',{class:'tiny'},'(بدون تسجيل صوتي — اطلب منها تقرأ لك)'):null,
-    (p.type!=='ink' && p.inks && p.inks.length)? h('div',{class:'stack work-card', style:'gap:4px'}, h('p',{class:'tiny'},'✏️ ما كتبته على صفحة الكتاب:'), p.inks.map(id=>Ink.viewer(id))) : null,
-    done ? h('span',{class:'pill ok'}, 'تم: ', starsTxt((S.parent.ratings[p.id]||{}).rating || p.rating || 3)) : (p.task? h('div',{class:'stack'}, h('p',{class:'tiny'}, p.type==='hw'?'شوف دفترها وتأكد أنها حلّت الواجب، ثم اعتمد:':'تأكد أنها نفّذت المهمة، ثم اعتمد:'), confirmBtn(p)) : h('div',{class:'stack'}, h('p',{class:'tiny'}, p.audio? 'قيّم قراءتها بعد الاستماع:' : p.type==='read'?'اطلب منها تقرأ لك من صفحة الكتاب ثم قيّم:':'اطلب منها تنشد لك ثم قيّم:'), rateBtns(p))));
+    done ? h('span',{class:'pill ok'}, 'تم: ', starsTxt((S.parent.ratings[p.id]||{}).rating || p.rating || 3)) : (p.task? h('div',{class:'stack'}, h('p',{class:'tiny'}, p.type==='hw'?'شوف دفترها وتأكد أنها حلّت الواجب، ثم اعتمد:':'تأكد أنها نفّذت المهمة، ثم اعتمد:'), confirmBtn(p)) : h('div',{class:'stack'}, h('p',{class:'tiny'}, p.audio? 'قيّم قراءتها بعد الاستماع:' : p.type==='read'?'اطلب منها تقرأ لك النص نفسه من اللعبة ثم قيّم:':'اطلب منها تنشد لك ثم قيّم:'), rateBtns(p))));
   return [
     h('h3',{}, `بانتظار اعتمادك (${pend.length})`),
     ...(pend.length? pend.map(p=>card(p,false)) : [h('div',{class:'empty'},'ما فيه شيء بانتظارك الآن.')]),
@@ -4188,7 +3845,6 @@ function tabSettings(){
       h('div',{class:'field'}, h('label',{for:'s-rw'},'المكافأة وعدد النجوم'), rw, rws),
       h('label',{class:'row', style:'gap:8px'}, remind, ' تذكير لطيف إذا فتحت درساً أو وحدة قبل إكمال السابق (لا شيء مقفل، وهدف اليوم في الخطة يُفتح بدون تذكير)'),
       h('button',{class:'btn btn-primary', onclick:async()=>{ S.settings=Object.assign({},s,{childName:name.value.trim()||s.childName, dailyGoalMin:clamp(parseInt(goal.value)||15,5,60), reward:{name:rw.value.trim(), stars:clamp(parseInt(rws.value)||60,10,500)}, remindPrev:remind.checked}); await Store.set('settings', S.settings); toast('حُفظت الإعدادات ✅'); }},'حفظ')),
-    bookSettingsCard(),
     h('div',{class:'card stack'}, h('h3',{},'🛡️ بيانات سديم المحفوظة'),
       h('p',{class:'small'}, `المحفوظ الآن: ${nRec} تسجيلًا صوتيًا · ${nWk} ورقة كتابة · ${nImg} صورة قديمة.`),
       h('div',{class:'field'}, h('label',{for:'s-keep'},'مدة الاحتفاظ بالتسجيلات والكتابة'), keep),
@@ -4257,20 +3913,9 @@ function tabReview(){
   ];
 }
 
-/* ---------- صفحات كتاب المدرسة ---------- */
-function bookSettingsCard(){
-  const has=!!BookPages.code(); const inp=h('input',{id:'s-book', class:'ltr', placeholder:'رمز الكتاب', value:BookPages.code(), autocapitalize:'characters', autocomplete:'off', style:'text-align:center;letter-spacing:1px'});
-  const st=h('p',{class:'small'}, has? '⏳ جارٍ التحقق من الصفحات…' : 'لم تُضَف صفحات الكتاب لهذه العائلة بعد.');
-  if (has) BookPages.available().then(ok=>{ st.textContent = ok? '✅ صفحات الكتاب مضافة وتظهر داخل اللعبة (١٦٠ صفحة).' : '⚠️ الرمز محفوظ لكن الصفحات لم تُحمَّل (تحقق من الاتصال أو من الرمز).'; }).catch(()=>{});
-  return h('div',{class:'card stack'}, h('h3',{},'📘 صفحات كتاب المدرسة'),
-    h('p',{class:'small'},'المسار الأساسي في اللعبة يعرض صفحات كتاب «لغتي» نفسها. الصفحات محفوظة في مساحة خاصة ولا تظهر إلا لمن عنده هذا الرمز.'), st,
-    h('div',{class:'field'}, h('label',{for:'s-book'},'رمز صفحات الكتاب'), inp),
-    h('button',{class:'btn btn-sm', onclick:async()=>{ const v=inp.value.toUpperCase().replace(/[^A-Z0-9]/g,''); S.settings=Object.assign({}, S.settings, {bookCode:v}); BookPages.mem={}; try{ if(v) localStorage.setItem('lg_book', v); else localStorage.removeItem('lg_book'); }catch(e){} await Store.set('settings', S.settings); toast('حُفظ ✅'); renderParent('settings'); }},'حفظ الرمز'));
-}
-
 /* ===================== الإقلاع ===================== */
 async function boot(){
-  TTS.init(); Say.init(); mountClock(); captureBookCode();
+  TTS.init(); Say.init(); mountClock();
   for (const k of ['settings','progress','mistakes','child','parent']) S[k]=Store.lget(k);
   Progress.ensure(); Mistakes.ensure(); Child.ensure(); Parent.ensure();
   if (!S.settings || !S.settings.pinHash) S.screen='setup'; else S.screen='home';
@@ -4294,10 +3939,7 @@ async function boot(){
     if (!S.settings || !S.settings.pinHash) S.screen='setup'; else if (S.screen==='setup') S.screen='home';
     if (!document.querySelector('.game')) render();
   }
-  /* المسار الأساسي صار من الكتاب: نتائج التمارين المؤلَّفة السابقة تنتقل مرة واحدة إلى «تمرين» (جهاز الطفلة هو الكاتب) */
-  if (!PARENT_ONLY){ if (migrateToBookKeys(true)){ await Progress.save(); await Child.save(); if (!document.querySelector('.game')) render(); } }
-  else { normProgressFromRemote(); normChildFromRemote(); }
-  if (await applyBookCode()){ if (!document.querySelector('.game')) render(); }
+  if (restoreClassicKeys() && !PARENT_ONLY){ await Progress.save(); await Child.save(); if (!document.querySelector('.game')) render(); }
   if (PARENT_ONLY){
     /* صفحة لوحة بابا: لا تُسجَّل كجلسة لعب، وتفتح مباشرة على اللوحة إذا كانت مفتوحة في هذه الجلسة */
     if (S.settings && S.settings.pinHash && S.screen!=='setup'){ if (Unlock.ok()) go('parent','hub'); else renderParentLock(); }
@@ -4305,6 +3947,21 @@ async function boot(){
   }
   try{ Log.ev({k:'open'}); }catch(e){}
   await applyParentRatings();
+}
+/* استرجاع ١٠ نوفمبر: نسخة «مسار الكتاب» نقلت نتائج الألعاب إلى مفاتيح تبدأ بـ x- ؛ هنا نعيدها كما كانت ونزيل ما سجّلته تلك النسخة فقط */
+function restoreClassicKeys(){
+  let ch=false;
+  if (S.progress && S.progress.xmig){
+    const P=S.progress; const book=/^(u\d(l\d)?|intro|lib)(\/|$)/;
+    for (const fld of ['stars','best']){ const o=P[fld]||{}; const n={}; for (const [k,v] of Object.entries(o)){ if (k.startsWith('x-')) n[k.slice(2)]=v; else if (!book.test(k)) n[k]=v; } P[fld]=n; }
+    delete P.xmig; P.totalStars=Object.values(P.stars).reduce((a,b)=>a+b,0); ch=true;
+  }
+  if (S.child){
+    const L=S.child.pending||[]; const keep=L.filter(p=>!p.book); if (keep.length!==L.length){ S.child.pending=keep; ch=true; }
+    for (const p of (S.child.pending||[])) if (p.station && String(p.station).startsWith('x-')){ p.station=p.station.slice(2); ch=true; }
+    const W=S.child.works||[]; const kw=W.filter(w=>!/^bk\//.test(String(w.id))); if (kw.length!==W.length){ S.child.works=kw; ch=true; }
+  }
+  return ch;
 }
 boot();
 
