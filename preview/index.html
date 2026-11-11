@@ -2205,6 +2205,12 @@ async function applyParentRatings(){
       const sk = p.skill || (p.type==='read' ? 'read' : p.type==='nasheed' ? 'nasheed' : '');
       if (sk){ Progress.recordSkill(sk, r.rating===3?1:0, 1, r.rating===2?1:0, r.rating<=1?1:0); prog=true; }
     }
+    /* بابا غيّر تقييمه بعد أن طُبّق (ضغطتان متلاحقتان، أو جهازان للوالدين): يُعتمد الأحدث حتى يطابق ما تعرضه لوحته.
+       النجوم «أفضل ما حُقّق» فلا تنقص، والمهارة لا تُحتسب مرتين. */
+    else if (r && p.status==='rated' && r.rating!==p.rating && (r.ts||0) > (p.ratedAt||0)){
+      p.rating=r.rating; p.ratedAt=r.ts; changed=true;
+      if (p.station){ Progress.setStars(p.station, r.rating); prog=true; Log.ev({k:'rated_by_parent', s:p.station, rating:r.rating, again:1}); }
+    }
     const tc = p.task && S.parent.taskConfirms[p.id];
     if (tc && p.status==='pending'){ p.status='rated'; p.rating=3; changed=true; if(p.station){ Progress.setStars(p.station,3,{acc:1,ms:0,at:p.ts}); prog=true; } }
   }
@@ -4784,8 +4790,10 @@ function tabApprovals(){
   Child.ensure(); Parent.ensure();
   const pend=S.child.pending.filter(p=>p.status==='pending' && !S.parent.ratings[p.id] && !S.parent.taskConfirms[p.id]);
   const rated=S.child.pending.filter(p=>p.status!=='removed').filter(p=>p.status!=='pending' || S.parent.ratings[p.id] || S.parent.taskConfirms[p.id]).slice(0,10);
-  const rateBtns=(p)=>h('div',{class:'row'}, ...[3,2,1].map(n=>h('button',{class:'btn btn-sm '+(n===3?'btn-green':n===2?'btn-sky':''), onclick:async()=>{ S.parent.ratings[p.id]={rating:n, ts:Date.now()}; await Parent.save(); Log.ev({k:'parent_rate', id:p.id, rating:n}); toast('تم الاعتماد ✅'); renderParent('approvals'); }}, starsTxt(n))));
-  const confirmBtn=(p)=>h('button',{class:'btn btn-sm btn-green', onclick:async()=>{ S.parent.taskConfirms[p.id]=Date.now(); await Parent.save(); toast('اعتمدت المهمة ✅'); renderParent('approvals'); }},'✅ أعتمد المهمة (٣ نجوم)');
+  /* ضغطة واحدة لكل عمل، والقائمة تتحدّث فورًا: كان الزر يبقى ظاهرًا حتى يكتمل الحفظ (ثوانٍ مع شبكة ضعيفة)،
+     فضغطة ثانية على تقييم آخر تجعل اللوحة تعرض تقييمًا والبنت تأخذ نجوم الأول. */
+  const rateBtns=(p)=>{ let used=false; return h('div',{class:'row'}, ...[3,2,1].map(n=>h('button',{class:'btn btn-sm '+(n===3?'btn-green':n===2?'btn-sky':''), onclick:async()=>{ if (used) return; used=true; S.parent.ratings[p.id]={rating:n, ts:Date.now()}; const pr=Parent.save(); Log.ev({k:'parent_rate', id:p.id, rating:n}); toast('تم الاعتماد ✅'); renderParent('approvals'); await pr; }}, starsTxt(n)))); };
+  const confirmBtn=(p)=>h('button',{class:'btn btn-sm btn-green', onclick:async()=>{ S.parent.taskConfirms[p.id]=Date.now(); const pr=Parent.save(); toast('اعتمدت المهمة ✅'); renderParent('approvals'); await pr; }},'✅ أعتمد المهمة (٣ نجوم)');
   const card=(p, done)=>h('div',{class:'card'}, h('div',{class:'row between'}, h('b',{}, p.type==='book'?'📖 من الكتاب — '+(p.title||''): p.type==='ink'?'✍️ كتابة بالقلم — '+(p.title||''): p.type==='read'?'📖 قراءة جهرية': p.type==='nasheed'?'🎵 تسميع نشيد': p.type==='hw'?'📓 واجب منزلي من الكتاب':'🏡 مهمة واقعية'), h('span',{class:'tiny'}, `${fmtDay(dayKey(p.ts))} ${fmtClock(p.ts)}`)),
     h('p',{class:'small'}, stationName(p.station), p.station? h('span',{class:'tiny'}, ' · 📖 ', srcOf(p.station)):null), p.text? h('p',{class:'small'}, p.text):null,
     p.type==='read'? h('p',{class:'small'}, `الوقت ${fmtMs(p.ms||0)} · ${p.wpm||0} كلمة/دقيقة · ${p.words||0} كلمة`, p.hard&&p.hard.length? h('span',{}, ` · كلمات سمعتها: ${p.hard.join('، ')}`):null):null,
@@ -4804,7 +4812,7 @@ function tabApprovals(){
 /* ---------- الرسائل ---------- */
 function tabMessages(){
   Child.ensure(); Parent.ensure();
-  let sticker='🌟'; const stickers=['🌟','🎉','👏','❤️','🦅','🌴','🏆','😘'];
+  let sticker='🌟', sending=false; const stickers=['🌟','🎉','👏','❤️','🦅','🌴','🏆','😘'];
   const stEls=stickers.map(s=>h('button',{class:'sticker'+(s===sticker?' on':''), onclick:e=>{ sticker=s; stEls.forEach(x=>x.classList.remove('on')); e.currentTarget.classList.add('on'); }}, s));
   const txt=h('textarea',{id:'f-msg', rows:2, placeholder:'مثال: فخور فيك يا بطلة! كملي الدرس الثاني اليوم'});
   const lessonOpts=[h('option',{value:''},'— اختر درساً أو وحدة —'), ...CONTENT.units.flatMap(u=>[h('option',{value:u.key}, `${u.icon} ${u.title} (الوحدة كاملة)`), ...u.lessons.map(l=>h('option',{value:l.key}, `   ${l.emoji} ${l.title}`))])];
@@ -4812,7 +4820,8 @@ function tabMessages(){
   const notes=S.child.notes.slice(0,15);
   return [
     h('div',{class:'card stack'}, h('h3',{},'💌 أرسل تشجيعاً يظهر لها داخل اللعبة'), h('div',{class:'stickers'},...stEls), txt,
-      h('button',{class:'btn btn-primary', onclick:async()=>{ const t=txt.value.trim(); if(!t && !sticker) return; S.parent.messages.unshift({id:uid(), ts:Date.now(), text:t, sticker}); S.parent.messages=S.parent.messages.slice(0,30); await Parent.save(); txt.value=''; toast('أُرسلت 💌'); Log.ev({k:'parent_msg'}); }},'إرسال')),
+      h('button',{class:'btn btn-primary', onclick:async()=>{ const t=txt.value.trim(); if((!t && !sticker) || sending) return; sending=true;   /* ضغطة ثانية أثناء الحفظ لا تكرّر الرسالة */
+        try{ S.parent.messages.unshift({id:uid(), ts:Date.now(), text:t, sticker}); S.parent.messages=S.parent.messages.slice(0,30); await Parent.save(); txt.value=''; toast('أُرسلت 💌'); Log.ev({k:'parent_msg'}); }finally{ sending=false; } }},'إرسال')),
     h('div',{class:'card stack'}, h('h3',{},'🎯 مهمة اليوم'), S.parent.mission? h('p',{class:'small'}, 'الحالية: ', stationName(S.parent.mission.key+(S.parent.mission.key.includes('l')?'/read':'/warmup')).split(' › ')[0], S.parent.mission.text? ' — '+S.parent.mission.text:'') : h('p',{class:'small'},'لا توجد مهمة محددة.'), sel, mtxt,
       h('div',{class:'row'}, h('button',{class:'btn btn-sky btn-sm', onclick:async()=>{ if(!sel.value){ toast('اختر درساً'); return; } S.parent.mission={key:sel.value, text:mtxt.value.trim(), ts:Date.now()}; await Parent.save(); toast('حُدّدت المهمة 🎯'); renderParent('messages'); }},'تحديد'), S.parent.mission? h('button',{class:'btn btn-sm', onclick:async()=>{ S.parent.mission=null; await Parent.save(); renderParent('messages'); }},'إلغاء المهمة'):null)),
     h('div',{class:'card'}, h('h3',{},'📨 رسائل من البنت'), ...(notes.length? notes.map(n=>h('div',{class:'ev'}, h('span',{class:'muted'}, `${fmtDay(dayKey(n.ts))} ${fmtClock(n.ts)}`), h('span',{}, n.text))) : [h('div',{class:'empty'},'لا توجد رسائل بعد.')])),
