@@ -1919,13 +1919,15 @@ const Store = {
   lset(k,v){ let s; try{ s=JSON.stringify(v); localStorage.setItem(LSP+k, s); return true; }catch(e){ return s===undefined? false : this._lfree(k, s); } },
   /* امتلأ التخزين المحلي: أرشيف الجلسات ونُسخ أوراق الكتابة التي وصلت الخادم موجودة في القاعدة، فتُحذف نسختها المحلية */
   _lfree(k, s){
-    try{ localStorage.removeItem(LSP+'sessions');
+    try{ const dm=this.dirtyMap(), pv=PARENT_ONLY && this.linked();
+      /* أرشيف الجلسات في الخادم: تُحذف نسخته المحلية، إلا جلسات لم تُرفع بعد. لوحة بابا تحذف نسختها هي فقط */
+      if (pv) localStorage.removeItem(LSP+'pv_sessions');
+      else { const keep=(this.lget('sessions')||[]).filter(x=>dm['sess_'+x.id]); localStorage.removeItem(LSP+'sessions'); if (keep.length){ try{ localStorage.setItem(LSP+'sessions', JSON.stringify(keep)); }catch(e){} } }
       if (this.linked()){   /* بلا ربط بالقاعدة النسخة المحلية هي الوحيدة: لا تُحذف أوراق الكتابة */
-        const dm=this.dirtyMap(), pre=LSP+'ink_', drop=[];
+        const pre=LSP+'ink_', drop=[];
         for (let i=0;i<localStorage.length;i++){ const key=localStorage.key(i); if (key && key.indexOf(pre)===0){ const x=key.slice(LSP.length); if (x!==k && !dm[x]) drop.push(key); } }
         drop.forEach(key=>localStorage.removeItem(key));
-        let lru=[]; try{ lru=JSON.parse(localStorage.getItem(LSP+'inklru')||'[]'); }catch(e){}
-        localStorage.setItem(LSP+'inklru', JSON.stringify(lru.filter(x=> x===k || dm[x])));
+        if (!pv){ let lru=[]; try{ lru=JSON.parse(localStorage.getItem(LSP+'inklru')||'[]'); }catch(e){} localStorage.setItem(LSP+'inklru', JSON.stringify(lru.filter(x=> x===k || dm[x]))); }
       }
       localStorage.setItem(LSP+k, s); return true;
     }catch(e){ console.warn('local storage full', k); return false; }
@@ -1933,7 +1935,8 @@ const Store = {
   /* ما كُتب على هذا الجهاز ولم يؤكّد الخادم وصوله بعد (العلامة تبقى بعد إغلاق الصفحة) */
   dirtyMap(){ try{ return JSON.parse(localStorage.getItem(LSP+'dirty')||'{}')||{}; }catch(e){ return {}; } },
   isDirty(k){ return !!this.dirtyMap()[k]; },
-  mark(k,on){ try{ const m=this.dirtyMap(); if(on){ if(m[k]) return; m[k]=Date.now(); } else { if(!m[k]) return; delete m[k]; } localStorage.setItem(LSP+'dirty', JSON.stringify(m)); }catch(e){} },
+  mark(k,on){ if (PARENT_ONLY && this.linked()) return;   /* لوحة بابا لا تكتب قائمة العلامات (مشتركة مع صفحة اللعبة إن كانتا على جهاز واحد)؛ ما تكتبه هي محفوظ في طابور القاعدة */
+    try{ const m=this.dirtyMap(); if(on){ if(m[k]) return; m[k]=Date.now(); } else { if(!m[k]) return; delete m[k]; } localStorage.setItem(LSP+'dirty', JSON.stringify(m)); }catch(e){} },
   /* وثائق لا يكتبها إلا جهاز البنت: نسختها المحلية غير المرفوعة أحدث مما في الخادم، فتُعتمد وتُرفع من جديد */
   ownKey(k){ return k==='progress' || k==='mistakes' || k==='child' || String(k).indexOf('ink_')===0; },
   own(k){ return !PARENT_ONLY && this.ownKey(k); },
@@ -2073,12 +2076,15 @@ const Store = {
     this.chains[k]=null;
   },
   async listSessions(n=60){
+    /* جلسات هذا الجهاز التي لم تُرفع بعد: نسختها المحلية أحدث مما في الخادم، فتبقى (منها يُعاد الرفع) وتظهر في القائمة.
+       لوحة بابا تحفظ نسخة القراءة في مفتاح لها (pv_sessions) ولا تكتب قائمة صفحة اللعبة. */
+    const pv=PARENT_ONLY && this.linked(), sk= pv? 'pv_sessions' : 'sessions';
+    const dm=this.dirtyMap(); const mine=(this.lget('sessions')||[]).filter(s=>dm['sess_'+s.id]); const ids=new Set(mine.map(s=>s.id));
+    const out=rest=>mine.concat(rest.filter(s=>!ids.has(s.id))).sort((a,b)=>b.start-a.start).slice(0,n);
     if (this.db){ try{ const q = await this.db.collection('sessions').orderBy('start','desc').limit(n).get(); const arr = q.docs.map(d=>d.data());
-        /* جلسات هذا الجهاز التي لم تُرفع بعد: نسختها المحلية أحدث مما في الخادم، فتبقى (منها يُعاد الرفع) وتظهر في القائمة */
-        const dm=this.dirtyMap(); const mine=(this.lget('sessions')||[]).filter(s=>dm['sess_'+s.id]); const ids=new Set(mine.map(s=>s.id)); const rest=arr.filter(s=>!ids.has(s.id));
-        this.lset('sessions', mine.concat(rest.slice(0,8)));
-        return mine.concat(rest).sort((a,b)=>b.start-a.start).slice(0,n); }catch(e){ console.warn('list sessions',e); } }
-    return (this.lget('sessions')||[]).slice().sort((a,b)=>b.start-a.start).slice(0,n);
+        const top=arr.filter(s=>!ids.has(s.id)).slice(0,8); this.lset(sk, pv? top : mine.concat(top));
+        return out(arr); }catch(e){ console.warn('list sessions',e); } }
+    return out(this.lget(sk) || this.lget('sessions') || []);
   }
 };
 
@@ -2140,7 +2146,8 @@ const Log = {
     if (++this.n % 12 === 0) this.flush();
   },
   station(st){ const s=this.ensure(); s.stations.push(Object.assign({t:Date.now()}, st)); s.end=Date.now(); s.minutes=Math.round((s.stations.reduce((a,b)=>a+(b.ms||0),0))/6000)/10; this.flush(); },
-  flush(){ if(!this.sess) return; this.sess.end=Math.max(this.sess.end, Date.now()); return Store.saveSession(this.sess); }
+  /* صفحة لوحة بابا ليست جلسة لعب: لا تكتب سجل جلسات (كانت تضيف للأرشيف جلسات فارغة باسم البنت) */
+  flush(){ if(!this.sess || PARENT_ONLY) return; this.sess.end=Math.max(this.sess.end, Date.now()); return Store.saveSession(this.sess); }
 };
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){ const g=window.CUR_G; if(g && !g.done && !g.aborted) Log.ev({k:'away', s:g.path||'', at:g.cur?g.cur.i:0, of:g.cur?g.cur.n:0, it:g.cur?g.cur.it:''}); else Log.ev({k:'away'}); Log.flush(); }
