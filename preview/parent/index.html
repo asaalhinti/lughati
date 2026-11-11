@@ -1913,15 +1913,21 @@ const Blobs = {
 };
 
 const Store = {
-  db:null, chains:{}, pending:{}, failed:{}, unsubs:[], GRACE:2500, syncing:false, syncSince:0, onSync:null, _gen:0, _watching:false,
+  db:null, chains:{}, pending:{}, failed:{}, unsubs:[], GRACE:2500, LATE:1200, _kick:{}, _seq:{}, syncing:false, syncSince:0, onSync:null, _gen:0, _watching:false,
   lget(k){ try{ const v=localStorage.getItem(LSP+k); return v?JSON.parse(v):null; }catch(e){ return null; } },
   /* يعيد true إذا كُتبت النسخة المحلية. إذا امتلأ تخزين المتصفح نُخلي ما يُستغنى عنه ونعيد المحاولة */
   lset(k,v){ let s; try{ s=JSON.stringify(v); localStorage.setItem(LSP+k, s); return true; }catch(e){ return s===undefined? false : this._lfree(k, s); } },
   /* امتلأ التخزين المحلي: أرشيف الجلسات ونُسخ أوراق الكتابة التي وصلت الخادم موجودة في القاعدة، فتُحذف نسختها المحلية */
   _lfree(k, s){
-    try{ localStorage.removeItem(LSP+'sessions'); const dm=this.dirtyMap(); let lru=[]; try{ lru=JSON.parse(localStorage.getItem(LSP+'inklru')||'[]'); }catch(e){}
-      const keep=[]; for (const x of lru){ if (x===k || dm[x]) keep.push(x); else localStorage.removeItem(LSP+x); }
-      localStorage.setItem(LSP+'inklru', JSON.stringify(keep)); localStorage.setItem(LSP+k, s); return true;
+    try{ localStorage.removeItem(LSP+'sessions');
+      if (this.linked()){   /* بلا ربط بالقاعدة النسخة المحلية هي الوحيدة: لا تُحذف أوراق الكتابة */
+        const dm=this.dirtyMap(), pre=LSP+'ink_', drop=[];
+        for (let i=0;i<localStorage.length;i++){ const key=localStorage.key(i); if (key && key.indexOf(pre)===0){ const x=key.slice(LSP.length); if (x!==k && !dm[x]) drop.push(key); } }
+        drop.forEach(key=>localStorage.removeItem(key));
+        let lru=[]; try{ lru=JSON.parse(localStorage.getItem(LSP+'inklru')||'[]'); }catch(e){}
+        localStorage.setItem(LSP+'inklru', JSON.stringify(lru.filter(x=> x===k || dm[x])));
+      }
+      localStorage.setItem(LSP+k, s); return true;
     }catch(e){ console.warn('local storage full', k); return false; }
   },
   /* ما كُتب على هذا الجهاز ولم يؤكّد الخادم وصوله بعد (العلامة تبقى بعد إغلاق الصفحة) */
@@ -1931,12 +1937,24 @@ const Store = {
   /* وثائق لا يكتبها إلا جهاز البنت: نسختها المحلية غير المرفوعة أحدث مما في الخادم، فتُعتمد وتُرفع من جديد */
   ownKey(k){ return k==='progress' || k==='mistakes' || k==='child' || String(k).indexOf('ink_')===0; },
   own(k){ return !PARENT_ONLY && this.ownKey(k); },
+  /* هل الجهاز مربوط بقاعدة العائلة؟ (يُسأل قبل اكتمال الاتصال أيضًا) */
+  linked(){ if (this.db || this.offlineLinked) return true; try{ const c=Family.code(); return !!(window.FIREBASE_CONFIG && c && c!=='LOCAL' && c.length>=10); }catch(e){ return false; } },
+  /* وثيقة يملكها جهاز البنت وهذه صفحة لوحة بابا. كتابات البنت المتلاحقة بلا شبكة لا يصل قاعدةَ المتصفح منها إلا الأولى،
+     والباقي في نسختها المحلية وحدها حتى ترجع الشبكة. فلوحة بابا — ولو فُتحت على الجهاز نفسه — لا تكتب تلك النسخة ولا علامتها
+     أبدًا: لها نسخة قراءة مستقلة (pv_)، ولا تنسخ أوراق الكتابة محليًا. (بلا ربط بالقاعدة النسخة المحلية هي البيانات نفسها فتبقى مشتركة.) */
+  foreign(k){ return PARENT_ONLY && this.ownKey(k) && this.linked(); },
+  mkey(k){ return this.foreign(k) ? (String(k).indexOf('ink_')===0 ? null : 'pv_'+k) : k; },
+  mget(k){ const m=this.mkey(k); if (!m) return null; const v=this.lget(m); return (v===null && m!==k) ? this.lget(k) : v; },
+  mset(k,v){ const m=this.mkey(k); return m ? this.lset(m,v) : false; },
   /* عند الإقلاع: ما بقي معلَّمًا «لم يُرفع» من جلسة سابقة يُرفع من نسخته المحلية (أوراق كتابة لم تُفتح بعدها مثلًا)، فتزول علامته عند وصوله */
   reconcile(){
     if (!this.db) return; const m=this.dirtyMap();
     for (const k of Object.keys(m)){
       if (this.chains[k]) continue;
-      if (this.ownKey(k)){ if (PARENT_ONLY) continue; const l=this.lget(k); if (l){ this.pending[k]=JSON.parse(JSON.stringify(l)); this.chains[k]=this._drain(k); continue; } }
+      if (String(k).indexOf('sess_')===0){   /* سجل جلسة لم يُرفع: يُرفع من نسخته المحلية (صفحة اللعبة فقط؛ لوحة بابا لا تمسّ علامات غيرها) */
+        if (PARENT_ONLY) continue; const id=String(k).slice(5); const se=(this.lget('sessions')||[]).find(x=>x.id===id);
+        if (se){ this.pending[k]=JSON.parse(JSON.stringify(se)); this.chains[k]=this._drainSess(id); continue; } }
+      else if (this.ownKey(k)){ if (PARENT_ONLY) continue; const l=this.lget(k); if (l){ this.pending[k]=JSON.parse(JSON.stringify(l)); this.chains[k]=this._drain(k); continue; } }
       this.mark(k,false);
     }
   },
@@ -1964,27 +1982,48 @@ const Store = {
         if (l){ if (!this.chains[k]){ this.pending[k]=JSON.parse(JSON.stringify(l)); this.chains[k]=this._drain(k); } return JSON.parse(JSON.stringify(l)); }
         this.mark(k,false);
       }
-      try{ const snap = await this.db.doc(this.path(k)).get(); if (snap.exists){ const d=snap.data(); this.lset(k,d); return JSON.parse(JSON.stringify(d)); } return null; }
-      catch(e){ console.warn('db get',k,e); return this.lget(k); }
+      try{ const snap = await this.db.doc(this.path(k)).get();
+        /* كُتبت الوثيقة على هذا الجهاز أثناء انتظار القراءة: ما كُتب أحدث مما وصل، فلا تُستبدل به النسخة المحلية */
+        if (this.own(k) && this.isDirty(k)){ const l=this.lget(k); if (l) return JSON.parse(JSON.stringify(l)); }
+        if (snap.exists){ const d=snap.data(); this.mset(k,d); return JSON.parse(JSON.stringify(d)); } return null; }
+      catch(e){ console.warn('db get',k,e); return this.mget(k); }
     }
-    return this.lget(k);
+    return this.mget(k);
   },
   /* يعيد وعدًا يكتمل عند تأكيد الخادم — بدون شبكة لا يكتمل حتى ترجع، فلا تنتظره الواجهة مباشرة (استعمل save) */
   set(k, data){
-    const okL=this.lset(k, data);
-    if (!this.db){ if (this.offlineLinked) this.mark(k, okL); return Promise.resolve(); }
-    this.mark(k, okL);   /* إن تعذّرت الكتابة المحلية (تخزين ممتلئ) فالنسخة المحلية قديمة: لا تُعتمد عند الإقلاع */
+    const fo=this.foreign(k);   /* لوحة بابا تكتب وثيقة للبنت (إعادة التعيين): نسختها هي لا نسخة البنت، وبلا علامة */
+    const okL= fo ? this.mset(k, data) : this.lset(k, data);
+    if (!this.db){ if (this.offlineLinked && !fo) this.mark(k, okL); return Promise.resolve(); }
+    if (!fo) this.mark(k, okL);   /* إن تعذّرت الكتابة المحلية (تخزين ممتلئ) فالنسخة المحلية قديمة: لا تُعتمد عند الإقلاع */
     this.pending[k] = JSON.parse(JSON.stringify(data));
     if (!this.chains[k]) this.chains[k] = this._drain(k);
+    else if (this._kick[k]) this._kick[k]();   /* كتابة سابقة تنتظر التأكيد: نُعلم السلسلة بوجود أحدث منها */
     return this.chains[k];
   },
+  /* يسلّم كتابة للقاعدة. الوعد: true عند تأكيد الخادم، false إذا رفضها بعد محاولتين. بلا شبكة يبقى معلّقًا والكتابة في طابور القاعدة الدائم. */
+  _send(k, d){
+    const n=this._seq[k]=(this._seq[k]||0)+1;
+    const once=()=>{ const w=this.db.doc(this.path(k)).set(d); this.touch(); return w; };
+    return (async()=>{ try{ await once(); return true; }catch(e){ console.warn('db set',k,e); await sleep(1500);
+        if (this._seq[k]!==n) return false;   /* سُلّمت بعدها كتابة أحدث: لا تُعاد القديمة فوقها */
+        try{ await once(); return true; }catch(e2){ console.warn('db set retry failed',k); return false; } } })();
+  },
+  /* السلسلة تبقى قائمة (chains[k]) ما دام للوثيقة كتابة لم يتأكد وصولها، وتنتهي عند تأكيد أحدث كتابة. */
   async _drain(k){
-    while (this.pending[k]){
-      const d = this.pending[k]; this.pending[k]=null; let ok=false;
-      try{ const w=this.db.doc(this.path(k)).set(d); this.touch(); await w; ok=true; }
-      catch(e){ console.warn('db set',k,e); await sleep(1500); try{ const w=this.db.doc(this.path(k)).set(d); this.touch(); await w; ok=true; }catch(e2){ console.warn('db set retry failed',k); } }
-      this.failed[k]=!ok;
-      if (ok && !this.pending[k]) this.mark(k,false);
+    const ink=String(k).indexOf('ink_')===0; let cur=null;
+    for(;;){
+      if (this.pending[k]){ const d=this.pending[k]; this.pending[k]=null; cur=this._send(k,d); }
+      if (!cur) break;
+      const done=cur.then(ok=>({ok}));
+      let ev=await Promise.race([done, new Promise(res=>{ this._kick[k]=()=>res(null); })]);
+      this._kick[k]=null;
+      /* جاءت كتابة أحدث والسابقة لم يتأكد وصولها. والشبكة تعمل يصل التأكيد خلال لحظة فتُرسل الأحدث بعده (تُدمج الكتابات المتلاحقة)؛
+         وإن تأخر (شبكة مقطوعة أو بطيئة) تُسلَّم الأحدث للقاعدة دون انتظاره، فتُحفظ في طابورها الدائم على الجهاز
+         ولا تبقى في ذاكرة الصفحة وحدها (كانت تضيع إذا أُغلقت الصفحة قبل رجوع الشبكة: تقييم بابا الثاني، أو آخر عمل للبنت).
+         أوراق الكتابة مستثناة (تُحفظ مع كل خط، ونسختها المحلية بعلامتها تحميها): تنتظر التأكيد كما كانت. */
+      if (!ev) ev=await (ink ? done : Promise.race([done, sleep(this.LATE).then(()=>null)]));
+      if (ev){ this.failed[k]=!ev.ok; if (!this.pending[k]){ if (ev.ok && !this.foreign(k)) this.mark(k,false); break; } cur=null; }
     }
     this.chains[k]=null;
   },
@@ -2011,24 +2050,34 @@ const Store = {
     if (this.db){
       /* أثناء كتابتنا نحن لهذه الوثيقة يصلنا «صدى» كتابتنا بكائن جديد: نتجاهله، فما في الذاكرة أحدث منه
          (استبدال الكائن كان يُضيّع ما يُعدَّل بعده عبر مراجع قديمة، وقد يُرجع الذاكرة لحالة أقدم إذا تلاحقت الضغطات). */
-      const u = this.db.doc(this.path(k)).onSnapshot(snap=>{ if (this.chains[k]) return; if(snap.exists){ const d=JSON.parse(JSON.stringify(snap.data())); this.lset(k,d); cb(d); } else cb(null); }, e=>console.warn('sub',k,e));
+      const u = this.db.doc(this.path(k)).onSnapshot(snap=>{ if (this.chains[k]) return;
+        if (this.own(k) && this.isDirty(k)) return;   /* على هذا الجهاز نسخة لم تُرفع بعد: هي الأحدث، وما يصل من القاعدة أقدم منها */
+        if(snap.exists){ const d=JSON.parse(JSON.stringify(snap.data())); this.mset(k,d); cb(d); } else cb(null); }, e=>console.warn('sub',k,e));
       this.unsubs.push(u); return u;
     }
-    cb(this.lget(k)); return ()=>{};
+    cb(this.mget(k)); return ()=>{};
   },
   async saveSession(sess){
-    const list = this.lget('sessions')||[]; const i=list.findIndex(s=>s.id===sess.id);
-    /* مع القاعدة: الأرشيف كله في الخادم، فنُبقي محليًا آخر الجلسات فقط حتى لا يمتلئ تخزين المتصفح (حدّه ٥ ميغابايت) */
-    const copy = JSON.parse(JSON.stringify(sess)); if(i>=0) list[i]=copy; else list.unshift(copy); this.lset('sessions', list.slice(0, this.db? 8 : 80));
-    if (this.db){ const k='sess_'+sess.id; this.pending[k]=copy; if(!this.chains[k]) this.chains[k]=this._drainSess(sess.id); return this.chains[k]; }
+    const list = this.lget('sessions')||[]; const i=list.findIndex(s=>s.id===sess.id); const k='sess_'+sess.id, link=!!this.db || !!this.offlineLinked;
+    /* مع القاعدة: الأرشيف كله في الخادم، فنُبقي محليًا آخر الجلسات فقط حتى لا يمتلئ تخزين المتصفح (حدّه ٥ ميغابايت).
+       جلسة لم يتأكد وصولها تُعلَّم «لم تُرفع» وتبقى محليًا مهما قدُمت، فتُرفع عند الإقلاع القادم إن أُغلقت الصفحة قبل رجوع الشبكة. */
+    const copy = JSON.parse(JSON.stringify(sess)); if(i>=0) list[i]=copy; else list.unshift(copy);
+    const dm= link? this.dirtyMap() : {}; const okL=this.lset('sessions', list.filter((s,j)=> j < (link? 8 : 80) || dm['sess_'+s.id]));
+    if (link && okL) this.mark(k,true);
+    if (this.db){ this.pending[k]=copy; if(!this.chains[k]) this.chains[k]=this._drainSess(sess.id); return this.chains[k]; }
   },
   async _drainSess(id){
     const k='sess_'+id;
-    while (this.pending[k]){ const d=this.pending[k]; this.pending[k]=null; try{ const w=this.db.doc('sessions/'+id).set(d); this.touch(); await w; }catch(e){ console.warn('sess set',e); } }
+    while (this.pending[k]){ const d=this.pending[k]; this.pending[k]=null; try{ const w=this.db.doc('sessions/'+id).set(d); this.touch(); await w; }catch(e){ console.warn('sess set',e); }
+      if (!this.pending[k]) this.mark(k,false); }
     this.chains[k]=null;
   },
   async listSessions(n=60){
-    if (this.db){ try{ const q = await this.db.collection('sessions').orderBy('start','desc').limit(n).get(); const arr = q.docs.map(d=>d.data()); this.lset('sessions', arr.slice(0,8)); return arr; }catch(e){ console.warn('list sessions',e); } }
+    if (this.db){ try{ const q = await this.db.collection('sessions').orderBy('start','desc').limit(n).get(); const arr = q.docs.map(d=>d.data());
+        /* جلسات هذا الجهاز التي لم تُرفع بعد: نسختها المحلية أحدث مما في الخادم، فتبقى (منها يُعاد الرفع) وتظهر في القائمة */
+        const dm=this.dirtyMap(); const mine=(this.lget('sessions')||[]).filter(s=>dm['sess_'+s.id]); const ids=new Set(mine.map(s=>s.id)); const rest=arr.filter(s=>!ids.has(s.id));
+        this.lset('sessions', mine.concat(rest.slice(0,8)));
+        return mine.concat(rest).sort((a,b)=>b.start-a.start).slice(0,n); }catch(e){ console.warn('list sessions',e); } }
     return (this.lget('sessions')||[]).slice().sort((a,b)=>b.start-a.start).slice(0,n);
   }
 };
@@ -2583,7 +2632,8 @@ const INK_COLORS = ['#1F3A8A', '#111827', '#C62828', '#2E7D32'];
 const Works = {
   CAP: 400,
   key(id){ return 'ink_' + String(id).replace(/[^a-zA-Z0-9]+/g, '_'); },
-  async load(id){ try{ return await Store.get(this.key(id)); }catch(e){ return Store.lget(this.key(id)); } },
+  /* النسخة المحلية التي تُكتب عند القراءة تُسجَّل في قائمة «الأحدث» حتى تُحذف حين تقدُم، فلا تتراكم الأوراق في تخزين المتصفح */
+  async load(id){ const k=this.key(id); try{ const d=await Store.get(k); if (d && S.mode==='db' && !PARENT_ONLY) this.lru(k); return d; }catch(e){ return Store.lget(k); } },
   /* النسخ المحلية لأوراق الكتابة: مع القاعدة نُبقي الأحدث فقط (الباقي في الخادم)، ولا تُحذف نسخة لم تصل الخادم بعد */
   lru(k){ try{ const dm = Store.dirtyMap(); const a = JSON.parse(localStorage.getItem(LSP+'inklru') || '[]').filter(x => x !== k); a.unshift(k); const max = S.mode === 'db' ? 10 : 60; const keep = [];
     a.forEach((x, i) => { if (i < max || dm[x]) keep.push(x); else localStorage.removeItem(LSP + x); }); localStorage.setItem(LSP+'inklru', JSON.stringify(keep)); }catch(e){} },
@@ -4983,7 +5033,7 @@ const STALE_MS = window.STALE_MS || 15*60*1000;   /* مدة الغياب الت�
 async function boot(){
   TTS.init(); Say.init(); mountClock(); captureBookCode();
   if (window.PREVIEW) await previewSeed();
-  for (const k of ['settings','progress','mistakes','child','parent']) S[k]=Store.lget(k);
+  for (const k of ['settings','progress','mistakes','child','parent']) S[k]=Store.mget(k);
   Progress.ensure(); Mistakes.ensure(); Child.ensure(); Parent.ensure();
   if (!S.settings || !S.settings.pinHash) S.screen='setup'; else S.screen='home';
   render();
