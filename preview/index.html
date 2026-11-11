@@ -19,7 +19,7 @@ if (!window.FB) try{
   const [{initializeApp},fs] = await Promise.all([
     import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'),
     import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js')]);
-  window.FB={initializeApp, initializeFirestore:fs.initializeFirestore, getFirestore:fs.getFirestore, persistentLocalCache:fs.persistentLocalCache, persistentMultipleTabManager:fs.persistentMultipleTabManager, doc:fs.doc, getDoc:fs.getDoc, setDoc:fs.setDoc, deleteDoc:fs.deleteDoc, onSnapshot:fs.onSnapshot, collection:fs.collection, query:fs.query, orderBy:fs.orderBy, limit:fs.limit, getDocs:fs.getDocs};
+  window.FB={initializeApp, initializeFirestore:fs.initializeFirestore, getFirestore:fs.getFirestore, persistentLocalCache:fs.persistentLocalCache, persistentMultipleTabManager:fs.persistentMultipleTabManager, doc:fs.doc, getDoc:fs.getDoc, setDoc:fs.setDoc, deleteDoc:fs.deleteDoc, onSnapshot:fs.onSnapshot, waitForPendingWrites:fs.waitForPendingWrites, enableNetwork:fs.enableNetwork, disableNetwork:fs.disableNetwork, collection:fs.collection, query:fs.query, orderBy:fs.orderBy, limit:fs.limit, getDocs:fs.getDocs};
 }catch(e){ console.warn('firebase load failed', e); window.FB=null; }
 if (window.__fbResolve) window.__fbResolve(window.FB||null);
 </script>
@@ -805,10 +805,10 @@ const UNIT1 = {
       style:{
         skill:'inna', title:'إِنَّ', tip:'بَعْدَ (إِنَّ) نَضَعُ فَتْحَةً عَلَى الْكَلِمَةِ: الْجَدُّ ← إِنَّ الْجَدَّ.',
         items:[
-          {t:'mcq', q:'أَضَعُ (إِنَّ) قَبْلَ: الْجَدُّ عَطُوفٌ', opts:['إِنَّ الْجَدَّ عَطُوفٌ','إِنَّ الْجَدُّ عَطُوفٌ','إِنَّ الْجَدِّ عَطُوفٌ'], a:0},
-          {t:'mcq', q:'أَضَعُ (إِنَّ) قَبْلَ: الطَّاعَةُ وَاجِبَةٌ', opts:['إِنَّ الطَّاعَةَ وَاجِبَةٌ','إِنَّ الطَّاعَةُ وَاجِبَةٌ','إِنَّ الطَّاعَةِ وَاجِبَةٌ'], a:0},
-          {t:'mcq', q:'أَضَعُ (إِنَّ) قَبْلَ: الْأُمُّ رَحِيمَةٌ', opts:['إِنَّ الْأُمَّ رَحِيمَةٌ','إِنَّ الْأُمُّ رَحِيمَةٌ','إِنَّ الْأُمِّ رَحِيمَةٌ'], a:0},
-          {t:'mcq', q:'أَضَعُ (إِنَّ) قَبْلَ: الِاعْتِذَارُ جَمِيلٌ', opts:['إِنَّ الِاعْتِذَارَ جَمِيلٌ','إِنَّ الِاعْتِذَارُ جَمِيلٌ','إِنَّ الِاعْتِذَارِ جَمِيلٌ'], a:0},
+          {t:'mcq', q:'ضَعِي (إِنَّ) قَبْلَ: الْجَدُّ عَطُوفٌ', opts:['إِنَّ الْجَدَّ عَطُوفٌ','إِنَّ الْجَدُّ عَطُوفٌ','إِنَّ الْجَدِّ عَطُوفٌ'], a:0},
+          {t:'mcq', q:'ضَعِي (إِنَّ) قَبْلَ: الطَّاعَةُ وَاجِبَةٌ', opts:['إِنَّ الطَّاعَةَ وَاجِبَةٌ','إِنَّ الطَّاعَةُ وَاجِبَةٌ','إِنَّ الطَّاعَةِ وَاجِبَةٌ'], a:0},
+          {t:'mcq', q:'ضَعِي (إِنَّ) قَبْلَ: الْأُمُّ رَحِيمَةٌ', opts:['إِنَّ الْأُمَّ رَحِيمَةٌ','إِنَّ الْأُمُّ رَحِيمَةٌ','إِنَّ الْأُمِّ رَحِيمَةٌ'], a:0},
+          {t:'mcq', q:'ضَعِي (إِنَّ) قَبْلَ: الِاعْتِذَارُ جَمِيلٌ', opts:['إِنَّ الِاعْتِذَارَ جَمِيلٌ','إِنَّ الِاعْتِذَارُ جَمِيلٌ','إِنَّ الِاعْتِذَارِ جَمِيلٌ'], a:0},
           {t:'order', q:'رَتِّبِي الْجُمْلَةَ الَّتِي تَبْدَأُ بِـ إِنَّ:', words:['إِنَّ','الْجَدَّةَ','حَنُونٌ'], answer:'إِنَّ الْجَدَّةَ حَنُونٌ'},
         ]
       },
@@ -1616,6 +1616,8 @@ const AUDIO = {"فِي يَوْمِ الْجُمُعَةِ، ذَهَبَتْ س
 /* عند تصحيح نصٍّ (تشكيل/صياغة) يتغيّر معرّفه في صفحة المراجعة؛ هذه الخريطة (تُعبَّأ من audio/moved.json عند البناء)
    تربط معرّف النص الجديد بمعرّفات نصوصه القديمة، فيرجع لبابا تحت «🔄 صُحِّحت» مع ملاحظته السابقة. */
 const REV_PREV = {"13bb34b":["1gkis2p"],"1tf186y":["69wb7w"],"limdfz":["1rwqs4q"],"192nki2":["1ypcxfx"],"d2f1vm":["13zrfyw"],"xfavjv":["4xaen6"],"2ntlnr":["rxi1ln"],"6cmg59":["1bf08tu"],"1ycjz94":["5h0j3n"],"w3ot1o":["s7fape"],"1antxxl":["7hhvut"],"1ijilcs":["v9qexk"],"1jv9anu":["koxvcm"],"y1lih":["8nw2k0"],"ucc57b":["1iex60i"],"9cgrkd":["61qzdu"],"gawhj":["1l8m4d"],"q82bkg":["wrdq7p"],"1kol3d":["14tjrim"],"6bv8ql":["1gpxv00"],"7osmp6":["1iqxoak"],"55shgn":["1xbvq50"],"13z5zcl":["dce492"],"5cvfj9":["1klwobc"],"rnrb69":["12txttx"],"xh2l4p":["1lnwwd2"],"3nqdhy":["8doe7p"],"1kkzpvy":["m59ir8"],"1dung72":["55z9cx"],"cpqhmz":["1pujcx6"],"1oxzcfe":["1rjii7w"],"1y16fqe":["1no75a4"],"zk7cb9":["8vpfp0"],"l20l3o":["vri292"],"fnnq4":["1a3459o"],"1gkw393":["rj3gnx"],"tluyn":["sif945"],"v4n5j9":["1bkhwt7"],"wsy4ar":["jwnpky"],"1lwd15t":["1cr6v4"],"1vlwloq":["1y7frh8"],"b706hy":["tg8j8k"],"14hcg92":["197iwkz"],"wpp33o":["7i50or"],"1imvz3b":["1lx0lgs"],"17467i7":["cvoh5j"],"kda68o":["1vyriu7"],"1m5yjha":["1xku03i"],"1fxad8d":["7tipcj"],"1bdjsgo":["l5kkm7"],"11wb56q":["3gky20"],"161s38q":["1vegf3h"],"phxvkb":["iuyoav"],"146fyrp":["1p5h58"],"8rw7f2":["wo15v8"],"1skn2v8":["sl4nlv"],"1oge5rf":["h33i5b"],"r5f72r":["1aj6n15"],"1ntj384":["ypu5ar"],"1t8hxo5":["15dpn8p"],"2wdrbj":["1reb2gi"],"ygocw":["14z52tn"],"1n4735i":["2iqlzp"],"xh663v":["1czc3vu"],"yvohxb":["1v501nq"],"qb1pus":["15uzgee"],"yict33":["q8cs21"],"199zynp":["u61mge"],"158unab":["1x0h2fp"],"1r1l5eo":["13irp56"],"ms27b5":["n9j8qw"],"u7wqpx":["4i7b17"],"191mqgt":["tjk6lu"],"1pt0h1g":["uknm0w"],"89jwn9":["1a21xvm"],"l9tril":["1aimnao"],"opkjhg":["1na60br"],"1hy7qsy":["yo5dxp"],"1pxut8e":["1w58sxv"],"gacs86":["g896ng"],"117rx86":["j42yr9"],"1vfpiqs":["10ba943"],"1m3i9p8":["12eu2v7"],"1vfsz4s":["1p0hifv"],"kqy2xr":["1hw8x4l"],"xhp457":["17vm5lt"],"1w24ozv":["1gficve"],"1lfyovi":["omcwet"],"16mj46z":["1yc4aal"],"jk07ck":["1ry94ka"],"1ezkm36":["hyygd1"],"tprotq":["rwo79l"],"g20dzs":["3heyt3"],"1u2z03w":["4pausr"],"1su4xrg":["zcmg7f"],"10o8jfn":["mo9in"],"1bwsin2":["zdj9kt"],"1way8qa":["gn9v8x"],"rong6":["1mw7hbg"],"1a6kt35":["1mql0ww"],"h78uhj":["o2a6zk"],"1960flb":["1nqnxwu"],"1sxzzya":["o58j46"],"1yi0htq":["18v8zxj"]};
+/* مثلها لنصوص «أسئلة وإجابات» (بلا مقطع): نص السؤال الجديد ← نصوصه القديمة (من book/moved_qa.json عند البناء). */
+const REV_PREV_Q = {"ضَعِي (إِنَّ) قَبْلَ: الْجَدُّ عَطُوفٌ":["أَضَعُ (إِنَّ) قَبْلَ: الْجَدُّ عَطُوفٌ"],"ضَعِي (إِنَّ) قَبْلَ: الطَّاعَةُ وَاجِبَةٌ":["أَضَعُ (إِنَّ) قَبْلَ: الطَّاعَةُ وَاجِبَةٌ"],"ضَعِي (إِنَّ) قَبْلَ: الْأُمُّ رَحِيمَةٌ":["أَضَعُ (إِنَّ) قَبْلَ: الْأُمُّ رَحِيمَةٌ"],"ضَعِي (إِنَّ) قَبْلَ: الِاعْتِذَارُ جَمِيلٌ":["أَضَعُ (إِنَّ) قَبْلَ: الِاعْتِذَارُ جَمِيلٌ"]};
 
 /* ===================== أدوات عامة ===================== */
 const $ = (s, r=document) => r.querySelector(s);
@@ -1798,21 +1800,28 @@ const Rec = {
     const mime=this.mime(); let mr; try{ mr=new MediaRecorder(stream, Object.assign({audioBitsPerSecond:32000}, mime?{mimeType:mime}:{})); }catch(e){ mr=new MediaRecorder(stream, mime?{mimeType:mime}:{}); } const chunks=[]; const t0=Date.now();
     mr.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
     mr.start(500);
+    /* active = عدد التسجيلات الجارية الآن (لا يُشغَّل صوت التعليمة تلقائيًا فوق تسجيلها) */
+    let live=true; Rec.active=(Rec.active||0)+1; const off=()=>{ if(live){ live=false; Rec.active=Math.max(0,(Rec.active||1)-1); } stream.getTracks().forEach(t=>t.stop()); };
     return { mr, stream,
-      stop(){ return new Promise(res=>{ if(mr.state==='inactive'){ stream.getTracks().forEach(t=>t.stop()); return res(null); } mr.onstop=()=>{ stream.getTracks().forEach(t=>t.stop()); const type=((mr.mimeType||mime||'audio/webm').split(';')[0]); res({blob:new Blob(chunks,{type}), type, ms:Date.now()-t0}); }; try{ mr.stop(); }catch(e){ stream.getTracks().forEach(t=>t.stop()); res(null); } }); },
-      cancel(){ try{ mr.onstop=null; if(mr.state!=='inactive') mr.stop(); }catch(e){} stream.getTracks().forEach(t=>t.stop()); }
+      stop(){ return new Promise(res=>{ if(mr.state==='inactive'){ off(); return res(null); } mr.onstop=()=>{ off(); const type=((mr.mimeType||mime||'audio/webm').split(';')[0]); res({blob:new Blob(chunks,{type}), type, ms:Date.now()-t0}); }; try{ mr.stop(); }catch(e){ off(); res(null); } }); },
+      cancel(){ try{ mr.onstop=null; if(mr.state!=='inactive') mr.stop(); }catch(e){} off(); }
     };
   },
   /* يرفع التسجيل كأصل (mp4/webm) ويعيد {id,type} أو null */
   async upload(rec){
     if (!S.assets || !rec || !rec.blob || !rec.blob.size) return null;
     const type = /mp4|aac|m4a|mpeg/.test(rec.type) ? 'video/mp4' : 'video/webm';
-    try{ const up=await S.assets.upload(rec.blob,{type}); return {id:up.id, type}; }catch(e){ console.warn('rec upload', e); return null; }
+    try{ const up=await S.assets.upload(rec.blob,{type}); return {id:up.id, type, done: up.done||Promise.resolve(true)}; }catch(e){ console.warn('rec upload', e); return null; }
   },
+  /* تسجيلات ما زالت تنتظر تقييم بابا: لا تُحذف مهما كثرت التسجيلات بعدها */
+  pendingAudio(){ const ids=new Set(); for (const p of (S.child && S.child.pending)||[]){ if (p.status!=='pending') continue; if (p.audio) ids.add(p.audio); for (const q of p.parts||[]) if (q.audio) ids.add(q.audio); } return ids; },
+  /* يعيد {id,type,done}: التسجيل يُحفظ على الجهاز فورًا، و done يكتمل عند وصوله للقاعدة (الواجهة لا تتعلّق عليه؛ بدون شبكة يُرفع وحده عند رجوعها) */
   async save(rec, meta){
     try{ Log.ev({k:'rec', s:(meta&&meta.path)||'', kind:(meta&&meta.kind)||'', ms:rec&&rec.ms}); }catch(e){}
     const up=await this.upload(rec); if(!up) return null;
-    Child.ensure(); S.child.recordings=S.child.recordings||[]; S.child.recordings.unshift(Object.assign({id:up.id, type:up.type, ts:Date.now(), ms:rec.ms}, meta)); const dropped=S.child.recordings.slice(REC_CAP); S.child.recordings=S.child.recordings.slice(0,REC_CAP); await Child.save(); dropped.forEach(d=>Blobs.delete(d.id));
+    Child.ensure(); const R=S.child.recordings=S.child.recordings||[]; R.unshift(Object.assign({id:up.id, type:up.type, ts:Date.now(), ms:rec.ms}, meta));
+    if (R.length>REC_CAP){ const keep=this.pendingAudio(); const out=[]; R.forEach((r,i)=>{ if (i<REC_CAP || keep.has(r.id)) out.push(r); else Blobs.delete(r.id); }); S.child.recordings=out; }
+    Child.save();
     Log.ev({k:'rec', s:meta.path, ms:rec.ms, asset:up.id}); return up;
   }
 };
@@ -1865,19 +1874,26 @@ function fbAdapter(FB, code){
     orderBy(f,dir){ return collRef(c,[f,dir||'asc'],lim); }, limit(n){ return collRef(c,ob,n); },
     async get(){ const parts=[FB.collection(fsdb, base+c)]; if(ob) parts.push(FB.orderBy(ob[0], ob[1])); parts.push(FB.limit(lim)); const q=FB.query(...parts); const res=await FB.getDocs(q); return {docs: res.docs.map(wrapSnap), size:res.size, empty:res.empty}; },
     doc(id){ return docRef(c+'/'+id); } });
-  return { doc: docRef, collection: c=>collRef(c), raw: fsdb };
+  return { doc: docRef, collection: c=>collRef(c), raw: fsdb,
+    /* يكتمل عندما يؤكّد الخادم كل ما كُتب على هذا الجهاز ولم يُرفع بعد (ومنه ما بقي من جلسة سابقة) */
+    wait: FB.waitForPendingWrites ? ()=>FB.waitForPendingWrites(fsdb) : null,
+    /* للاختبار: قطع اتصال القاعدة وإرجاعه */
+    net: on=> on ? (FB.enableNetwork? FB.enableNetwork(fsdb) : Promise.resolve()) : (FB.disableNetwork? FB.disableNetwork(fsdb) : Promise.resolve()) };
 }
 
 /* ===================== ملفات (تسجيلات/صور) داخل Firestore مقسّمة إلى أجزاء ===================== */
 const Blobs = {
   PART: 700000, cache:{},
   b64(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(',')[1]||''); r.onerror=rej; r.readAsDataURL(blob); }); },
+  /* يكتب الملف في القاعدة (أجزاء) ويعيد فورًا: الكتابة تُحفظ في ذاكرة القاعدة على الجهاز وتُرفع وحدها.
+     done يكتمل بـ true عند تأكيد الخادم (بدون شبكة لا يكتمل حتى ترجع) — لا تنتظره الواجهة بلا حدّ. */
   async upload(blob, opts={}){
     const type=(opts.type||blob.type||'application/octet-stream'); const id=uid()+uid();
-    const data=await this.b64(blob); const n=Math.ceil(data.length/this.PART)||1;
-    for(let i=0;i<n;i++) await Store.db.doc(`blobs/${id}/parts/${i}`).set({b64:data.slice(i*this.PART,(i+1)*this.PART)});
-    await Store.db.doc('blobs/'+id).set({type, size:blob.size, parts:n, ts:Date.now()});
-    return {id, url:'fsblob:'+id, sizeBytes:blob.size, contentType:type};
+    const data=await this.b64(blob); const n=Math.ceil(data.length/this.PART)||1; const ws=[];
+    for(let i=0;i<n;i++) ws.push(Store.db.doc(`blobs/${id}/parts/${i}`).set({b64:data.slice(i*this.PART,(i+1)*this.PART)}));
+    ws.push(Store.db.doc('blobs/'+id).set({type, size:blob.size, parts:n, ts:Date.now()}));
+    const done=Promise.all(ws).then(()=>true, e=>{ console.warn('blob upload', id, e); return false; }); Store.touch();
+    return {id, url:'fsblob:'+id, sizeBytes:blob.size, contentType:type, done};
   },
   async url(id){
     if (!id) return null; if (this.cache[id]) return this.cache[id];
@@ -1891,9 +1907,33 @@ const Blobs = {
 };
 
 const Store = {
-  db:null, chains:{}, pending:{}, failed:{}, unsubs:[],
+  db:null, chains:{}, pending:{}, failed:{}, unsubs:[], GRACE:2500, syncing:false, syncSince:0, onSync:null, _gen:0, _watching:false,
   lget(k){ try{ const v=localStorage.getItem(LSP+k); return v?JSON.parse(v):null; }catch(e){ return null; } },
-  lset(k,v){ try{ localStorage.setItem(LSP+k, JSON.stringify(v)); }catch(e){} },
+  /* يعيد true إذا كُتبت النسخة المحلية. إذا امتلأ تخزين المتصفح نُخلي ما يُستغنى عنه ونعيد المحاولة */
+  lset(k,v){ let s; try{ s=JSON.stringify(v); localStorage.setItem(LSP+k, s); return true; }catch(e){ return s===undefined? false : this._lfree(k, s); } },
+  /* امتلأ التخزين المحلي: أرشيف الجلسات ونُسخ أوراق الكتابة التي وصلت الخادم موجودة في القاعدة، فتُحذف نسختها المحلية */
+  _lfree(k, s){
+    try{ localStorage.removeItem(LSP+'sessions'); const dm=this.dirtyMap(); let lru=[]; try{ lru=JSON.parse(localStorage.getItem(LSP+'inklru')||'[]'); }catch(e){}
+      const keep=[]; for (const x of lru){ if (x===k || dm[x]) keep.push(x); else localStorage.removeItem(LSP+x); }
+      localStorage.setItem(LSP+'inklru', JSON.stringify(keep)); localStorage.setItem(LSP+k, s); return true;
+    }catch(e){ console.warn('local storage full', k); return false; }
+  },
+  /* ما كُتب على هذا الجهاز ولم يؤكّد الخادم وصوله بعد (العلامة تبقى بعد إغلاق الصفحة) */
+  dirtyMap(){ try{ return JSON.parse(localStorage.getItem(LSP+'dirty')||'{}')||{}; }catch(e){ return {}; } },
+  isDirty(k){ return !!this.dirtyMap()[k]; },
+  mark(k,on){ try{ const m=this.dirtyMap(); if(on){ if(m[k]) return; m[k]=Date.now(); } else { if(!m[k]) return; delete m[k]; } localStorage.setItem(LSP+'dirty', JSON.stringify(m)); }catch(e){} },
+  /* وثائق لا يكتبها إلا جهاز البنت: نسختها المحلية غير المرفوعة أحدث مما في الخادم، فتُعتمد وتُرفع من جديد */
+  ownKey(k){ return k==='progress' || k==='mistakes' || k==='child' || String(k).indexOf('ink_')===0; },
+  own(k){ return !PARENT_ONLY && this.ownKey(k); },
+  /* عند الإقلاع: ما بقي معلَّمًا «لم يُرفع» من جلسة سابقة يُرفع من نسخته المحلية (أوراق كتابة لم تُفتح بعدها مثلًا)، فتزول علامته عند وصوله */
+  reconcile(){
+    if (!this.db) return; const m=this.dirtyMap();
+    for (const k of Object.keys(m)){
+      if (this.chains[k]) continue;
+      if (this.ownKey(k)){ if (PARENT_ONLY) continue; const l=this.lget(k); if (l){ this.pending[k]=JSON.parse(JSON.stringify(l)); this.chains[k]=this._drain(k); continue; } }
+      this.mark(k,false);
+    }
+  },
   path(k){ return 'state/'+k; },
   async init(){
     if (window.claude && typeof claude.use==='function'){
@@ -1910,26 +1950,55 @@ const Store = {
   },
   async get(k){
     if (this.db){
+      /* كتابة لم تصل الخادم (انقطاع الشبكة، أو أُغلقت الصفحة قبل الرفع): النسخة المحلية هي الأحدث، نعتمدها ونرفعها */
+      if (this.own(k) && this.isDirty(k)){
+        const l=this.lget(k);
+        if (l){ if (!this.chains[k]){ this.pending[k]=JSON.parse(JSON.stringify(l)); this.chains[k]=this._drain(k); } return JSON.parse(JSON.stringify(l)); }
+        this.mark(k,false);
+      }
       try{ const snap = await this.db.doc(this.path(k)).get(); if (snap.exists){ const d=snap.data(); this.lset(k,d); return JSON.parse(JSON.stringify(d)); } return null; }
       catch(e){ console.warn('db get',k,e); return this.lget(k); }
     }
     return this.lget(k);
   },
+  /* يعيد وعدًا يكتمل عند تأكيد الخادم — بدون شبكة لا يكتمل حتى ترجع، فلا تنتظره الواجهة مباشرة (استعمل save) */
   set(k, data){
-    this.lset(k, data);
+    const okL=this.lset(k, data);
     if (!this.db) return Promise.resolve();
+    this.mark(k, okL);   /* إن تعذّرت الكتابة المحلية (تخزين ممتلئ) فالنسخة المحلية قديمة: لا تُعتمد عند الإقلاع */
     this.pending[k] = JSON.parse(JSON.stringify(data));
     if (!this.chains[k]) this.chains[k] = this._drain(k);
     return this.chains[k];
   },
   async _drain(k){
     while (this.pending[k]){
-      const d = this.pending[k]; this.pending[k]=null;
-      try{ await this.db.doc(this.path(k)).set(d); this.failed[k]=false; }
-      catch(e){ console.warn('db set',k,e); await sleep(1500); try{ await this.db.doc(this.path(k)).set(d); this.failed[k]=false; }catch(e2){ console.warn('db set retry failed',k); this.failed[k]=true; } }
+      const d = this.pending[k]; this.pending[k]=null; let ok=false;
+      try{ const w=this.db.doc(this.path(k)).set(d); this.touch(); await w; ok=true; }
+      catch(e){ console.warn('db set',k,e); await sleep(1500); try{ const w=this.db.doc(this.path(k)).set(d); this.touch(); await w; ok=true; }catch(e2){ console.warn('db set retry failed',k); } }
+      this.failed[k]=!ok;
+      if (ok && !this.pending[k]) this.mark(k,false);
     }
     this.chains[k]=null;
   },
+  /* انتظار لطيف: الواجهة لا تتعلّق على تأكيد الخادم. يعيد 'ok' إذا تأكّد، و'wait' إذا لم يصل التأكيد بعد
+     (الكتابة محفوظة على الجهاز وتُرفع وحدها عند رجوع الشبكة). */
+  soft(p, ms){
+    let t; const lim=new Promise(r=>{ t=setTimeout(()=>r('wait'), ms!==undefined? ms : ((navigator.onLine===false || this.lagging())? 300 : this.GRACE)); });
+    return Promise.race([Promise.resolve(p).then(()=>'ok', ()=>'wait'), lim]).then(v=>{ clearTimeout(t); return v; });
+  },
+  save(k, data, ms){ return this.soft(this.set(k, data), ms).then(v=> (v==='ok' && this.failed[k]) ? 'fail' : v); },
+  /* هل بقي على هذا الجهاز ما لم يصل الخادم؟ يُستدعى بعد كل كتابة. */
+  touch(){ this._gen++; this._watch(); },
+  _watch(){
+    if (!this.db || !this.db.wait || this._watching) return; this._watching=true; const g=this._gen;
+    if (!this.syncing){ this.syncing=true; this.syncSince=Date.now(); this._emit(); }
+    this.db.wait().then(()=>{ this._watching=false; if (this._gen!==g) return this._watch(); this.syncing=false; this._emit(); }, e=>{ this._watching=false; console.warn('sync wait', e); });
+  },
+  _emit(){ if (this.onSync){ try{ this.onSync(this.syncing); }catch(e){} } },
+  /* الرفع متأخر منذ ثوانٍ: لا فائدة من انتظار كل كتابة جديدة */
+  lagging(){ return this.syncing && Date.now()-this.syncSince>4000; },
+  /* عالق = مضت ثوانٍ وما زال على الجهاز ما لم يُرفع (الشبكة مقطوعة أو ضعيفة) */
+  stuck(){ return this.syncing && Date.now()-this.syncSince>8000; },
   subscribe(k, cb){
     if (this.db){
       /* أثناء كتابتنا نحن لهذه الوثيقة يصلنا «صدى» كتابتنا بكائن جديد: نتجاهله، فما في الذاكرة أحدث منه
@@ -1941,16 +2010,17 @@ const Store = {
   },
   async saveSession(sess){
     const list = this.lget('sessions')||[]; const i=list.findIndex(s=>s.id===sess.id);
-    const copy = JSON.parse(JSON.stringify(sess)); if(i>=0) list[i]=copy; else list.unshift(copy); this.lset('sessions', list.slice(0,80));
+    /* مع القاعدة: الأرشيف كله في الخادم، فنُبقي محليًا آخر الجلسات فقط حتى لا يمتلئ تخزين المتصفح (حدّه ٥ ميغابايت) */
+    const copy = JSON.parse(JSON.stringify(sess)); if(i>=0) list[i]=copy; else list.unshift(copy); this.lset('sessions', list.slice(0, this.db? 8 : 80));
     if (this.db){ const k='sess_'+sess.id; this.pending[k]=copy; if(!this.chains[k]) this.chains[k]=this._drainSess(sess.id); return this.chains[k]; }
   },
   async _drainSess(id){
     const k='sess_'+id;
-    while (this.pending[k]){ const d=this.pending[k]; this.pending[k]=null; try{ await this.db.doc('sessions/'+id).set(d); }catch(e){ console.warn('sess set',e); } }
+    while (this.pending[k]){ const d=this.pending[k]; this.pending[k]=null; try{ const w=this.db.doc('sessions/'+id).set(d); this.touch(); await w; }catch(e){ console.warn('sess set',e); } }
     this.chains[k]=null;
   },
   async listSessions(n=60){
-    if (this.db){ try{ const q = await this.db.collection('sessions').orderBy('start','desc').limit(n).get(); const arr = q.docs.map(d=>d.data()); this.lset('sessions', arr.slice(0,80)); return arr; }catch(e){ console.warn('list sessions',e); } }
+    if (this.db){ try{ const q = await this.db.collection('sessions').orderBy('start','desc').limit(n).get(); const arr = q.docs.map(d=>d.data()); this.lset('sessions', arr.slice(0,8)); return arr; }catch(e){ console.warn('list sessions',e); } }
     return (this.lget('sessions')||[]).slice().sort((a,b)=>b.start-a.start).slice(0,n);
   }
 };
@@ -1977,7 +2047,7 @@ const Progress = {
   },
   addMinutes(ms){ this.ensure(); const k=dayKey(); S.progress.minutesByDay[k]=Math.round(((S.progress.minutesByDay[k]||0)+ms/60000)*10)/10; },
   touchStreak(){ const st=S.progress.streak; const t=dayKey(); if(st.last===t) return; const y=dayKey(Date.now()-86400000); st.days = st.last===y ? (st.days||0)+1 : 1; st.last=t; },
-  save(){ return Store.set('progress', S.progress); }
+  save(){ return Store.save('progress', S.progress); }
 };
 
 /* ===================== صندوق الأخطاء ===================== */
@@ -1986,12 +2056,12 @@ const Mistakes = {
   key(item){ const base = item.t==='dict'?item.w : item.t==='order'?item.answer : item.t==='syll'?item.w : item.t==='sortone'?item.w : (item.q||'')+(item.say||''); return (item.t+':'+stripT(N(base))).slice(0,120).replace(/[^\p{L}\p{N}:\s]/gu,'').trim(); },
   add(item, skill, src){
     this.ensure(); const k=this.key(item); const it=S.mistakes.items[k]||{item:this.slim(item), skill, src, count:0, streak:0, ts:0};
-    it.count++; it.streak=0; it.ts=Date.now(); it.skill=skill||it.skill; it.src=src||it.src; S.mistakes.items[k]=it; return Store.set('mistakes', S.mistakes);
+    it.count++; it.streak=0; it.ts=Date.now(); it.skill=skill||it.skill; it.src=src||it.src; S.mistakes.items[k]=it; return Store.save('mistakes', S.mistakes);
   },
   slim(item){ const o={}; for(const k of ['t','q','opts','a','say','words','answer','w','syl','baskets','b','mode','emoji','skill']) if(item[k]!==undefined) o[k]=item[k]; return o; },
   correct(item){
     this.ensure(); const k=this.key(item); const it=S.mistakes.items[k]; if(!it) return;
-    it.streak=(it.streak||0)+1; it.ts=Date.now(); if(it.streak>=3) delete S.mistakes.items[k]; return Store.set('mistakes', S.mistakes);
+    it.streak=(it.streak||0)+1; it.ts=Date.now(); if(it.streak>=3) delete S.mistakes.items[k]; return Store.save('mistakes', S.mistakes);
   },
   list(){ this.ensure(); return Object.entries(S.mistakes.items).map(([k,v])=>({key:k,...v})).sort((a,b)=>b.count-a.count || b.ts-a.ts); },
   count(){ this.ensure(); return Object.keys(S.mistakes.items).length; }
@@ -2027,13 +2097,13 @@ const Child = {
   /* لا يُحذف ما ينتظر تقييم بابا (حتى ١٥٠)؛ المقيَّم القديم هو الذي يُختصر */
   addPending(p){ this.ensure(); S.child.pending.unshift(Object.assign({id:uid(), ts:Date.now(), status:'pending'}, p));
     const L=S.child.pending; if(L.length>60){ const keep=new Set(L.filter(x=>x.status==='pending').slice(0,150).map(x=>x.id)); let room=Math.max(0, 60-keep.size); for(const x of L){ if(!keep.has(x.id) && room>0){ keep.add(x.id); room--; } } S.child.pending=L.filter(x=>keep.has(x.id)); }
-    return Store.set('child', S.child); },
-  note(text, kind){ this.ensure(); S.child.notes.unshift({id:uid(), ts:Date.now(), text, kind:kind||'note'}); S.child.notes=S.child.notes.slice(0,40); return Store.set('child', S.child); },
-  save(){ this.ensure(); return Store.set('child', S.child); }
+    return Store.save('child', S.child); },
+  note(text, kind){ this.ensure(); S.child.notes.unshift({id:uid(), ts:Date.now(), text, kind:kind||'note'}); S.child.notes=S.child.notes.slice(0,40); return Store.save('child', S.child); },
+  save(){ this.ensure(); return Store.save('child', S.child); }
 };
 const Parent = {
   ensure(){ if(!S.parent) S.parent={messages:[], mission:null, ratings:{}, taskConfirms:{}, weekPlan:null}; for(const k of ['messages']) if(!S.parent[k]) S.parent[k]=[]; if(!S.parent.ratings) S.parent.ratings={}; if(!S.parent.taskConfirms) S.parent.taskConfirms={}; if(S.parent.weekPlan===undefined) S.parent.weekPlan=null; if(!S.parent.seenNotes) S.parent.seenNotes={}; return S.parent; },
-  save(){ this.ensure(); return Store.set('parent', S.parent); }
+  save(){ this.ensure(); return Store.save('parent', S.parent); }
 };
 /* ===================== قفل اللعبة من لوحة بابا ===================== */
 /* S.parent.lock = {ts, until (0 = حتى يفتحها بابا), msg} — يصل جهاز البنت مع وثيقة بابا خلال ثوانٍ.
@@ -2167,7 +2237,7 @@ function mountClock(){
 }
 
 /* ===================== شاشة اللعب العامة ===================== */
-function mount(node){ const app=$('#app'); app.replaceChildren(node); window.scrollTo(0,0); if(!(node.classList&&node.classList.contains('game'))) window.CUR_G=null; }
+function mount(node){ const app=$('#app'); app.replaceChildren(node); window.scrollTo(0,0); try{ Ink.sweep(); }catch(e){} if(!(node.classList&&node.classList.contains('game'))) window.CUR_G=null; }
 
 function makeGame(title){
   const dots=h('div',{class:'dots'});
@@ -2177,7 +2247,7 @@ function makeGame(title){
       h('h3',{},'هَلْ تُرِيدِينَ الْخُرُوجَ؟'),
       h('p',{class:'small'},'نُجُومُكِ السَّابِقَةُ مَحْفُوظَةٌ، لَكِنَّ هَذِهِ اللُّعْبَةَ لَنْ تُحْسَبَ.'),
       h('div',{class:'row center'},
-        h('button',{class:'btn btn-primary', onclick:()=>{ closeSheet(); }},'أَكْمِلُ اللَّعِبَ'),
+        h('button',{class:'btn btn-primary', onclick:()=>{ closeSheet(); }},'أُكْمِلُ اللَّعِبَ'),
         h('button',{class:'btn', onclick:()=>{ closeSheet(); g.aborted=true; Say.stop(); Log.ev({k:'quit', s:g.path||'', at:g.cur?g.cur.i:0, of:g.cur?g.cur.n:0, it:g.cur?g.cur.it:'', ms:Date.now()-(g.t0||Date.now())}); if(g.abortCurrent) g.abortCurrent({aborted:true}); }},'أَخْرُجُ')
       )));
   }},'✕');
@@ -2427,16 +2497,20 @@ function showEvidence(sentences, idx){
 /* تعيد {rec:{blob,type,ms}} أو {skip:true} أو {aborted:true} */
 function recorderUI(g, {title='🎙️ سَجِّلِي صَوْتَكِ', hint='اضْغَطِي 🎙️ ثُمَّ تَكَلَّمِي بِصَوْتٍ وَاضِحٍ، وَعِنْدَ الِانْتِهَاءِ اضْغَطِي ⏹️. تَقْدِرِينَ تُعِيدِينَ التَّسْجِيلَ كَمَا تُحِبِّينَ.', sendLabel='📨 أَرْسِلِي لِبَابَا', skipLabel='⏭️ أُكْمِلُ بِدُونِ تَسْجِيلٍ', allowSkip=true, extra=null}={}){
   return new Promise(res=>{
-    let session=null, rec=null, iv=null, url=null, done=false;
-    const fin=v=>{ if(done) return; done=true; clearInterval(iv); if(session){ session.cancel(); session=null; } if(url) URL.revokeObjectURL(url); res(v); };
+    let session=null, rec=null, iv=null, url=null, done=false, starting=false;
+    const playerWrap=h('div',{class:'row center'});
+    const hush=()=>{ const a=playerWrap.querySelector('audio'); if(a){ try{ a.pause(); }catch(e){} } };
+    const fin=v=>{ if(done) return; done=true; clearInterval(iv); hush(); if(session){ session.cancel(); session=null; } if(url) URL.revokeObjectURL(url); res(v); };
     g.abortCurrent=r=>fin(r);
     const timer=h('div',{class:'timer'},'00:00'); const status=h('div',{class:'rec-status'},'');
     const box=h('div',{class:'rec-box'}, h('div',{class:'prompt', style:'font-size:1.2rem'}, h('span',{class:'emoji'},'🎙️'), title, h('span',{class:'tip'}, hint)), extra, status, timer);
-    const playerWrap=h('div',{class:'row center'});
     g.body.replaceChildren(box, playerWrap);
-    const idle=()=>{ status.replaceChildren(); timer.textContent='00:00'; playerWrap.replaceChildren();
+    const idle=()=>{ status.replaceChildren(); timer.textContent='00:00'; hush(); playerWrap.replaceChildren();
       g.foot.replaceChildren(h('button',{class:'btn btn-primary', onclick:start},'🎙️ ابْدَئِي التَّسْجِيلَ'), allowSkip? h('button',{class:'btn btn-ghost btn-sm', onclick:()=>fin({skip:true})}, skipLabel):null); };
     async function start(){
+      if (starting || session) return; starting=true; try{ await start1(); }finally{ starting=false; }
+    }
+    async function start1(){
       if(!Rec.support()){ Log.ev({k:'mic_unsupported'}); status.replaceChildren(h('div',{class:'banner'},'🎙️ الْمَايْك لَا يَعْمَلُ فِي هَذَا الْمُتَصَفِّحِ. أَكْمِلِي بِدُونِ تَسْجِيلٍ.')); g.foot.replaceChildren(h('button',{class:'btn', onclick:()=>fin({skip:true})},'أُكْمِلُ بِدُونِ تَسْجِيلٍ ←')); return; }
       try{ session=await Rec.start(); }catch(e){ Log.ev({k:'mic_denied', err:String(e&&e.name||e).slice(0,40)}); status.replaceChildren(h('div',{class:'banner'},'🎙️ مَا قَدَرْتُ أَفْتَحُ الْمَايْك. اطْلُبِي مِنْ بَابَا أَنْ يَسْمَحَ لِلْمَايْك، أَوْ أَكْمِلِي بِدُونِ تَسْجِيلٍ.')); g.foot.replaceChildren(h('button',{class:'btn btn-primary', onclick:start},'🔁 جَرِّبِي مَرَّةً ثَانِيَةً'), h('button',{class:'btn', onclick:()=>fin({skip:true})},'أُكْمِلُ بِدُونِ تَسْجِيلٍ ←')); return; }
       if(done){ session.cancel(); return; }
@@ -2454,7 +2528,7 @@ function recorderUI(g, {title='🎙️ سَجِّلِي صَوْتَكِ', hint=
 /* مراجعة تسجيل التقط أثناء القراءة: تعيد {ok:true} أو {redo:true} أو {aborted:true} */
 function reviewRecording(g, rec, {title='🎧 اسْمَعِي قِرَاءَتَكِ', ms}={}){
   return new Promise(res=>{
-    const url=URL.createObjectURL(rec.blob); let done=false; const fin=v=>{ if(done) return; done=true; URL.revokeObjectURL(url); res(v); };
+    const url=URL.createObjectURL(rec.blob); let done=false; const fin=v=>{ if(done) return; done=true; const a=g.body.querySelector('audio'); if(a){ try{ a.pause(); }catch(e){} } URL.revokeObjectURL(url); res(v); };
     g.abortCurrent=r=>fin(r);
     g.body.replaceChildren(h('div',{class:'prompt', style:'font-size:1.2rem'}, h('span',{class:'emoji'},'🎧'), title, h('span',{class:'tip'},'هَلْ كَانَتْ قِرَاءَتُكِ وَاضِحَةً؟ تَقْدِرِينَ تُعِيدِينَ الْقِرَاءَةَ وَالتَّسْجِيلَ مَرَّةً ثَانِيَةً.'), ms? h('span',{class:'tip'}, `⏱️ ${fmtMs(ms)}`):null), h('div',{class:'row center'}, h('audio',{controls:'', src:url, style:'width:100%'})));
     g.foot.replaceChildren(h('button',{class:'btn btn-primary', onclick:()=>fin({ok:true})},'التَّالِي ←'), h('button',{class:'btn', onclick:()=>fin({redo:true})},'🔁 أُعِيدُ الْقِرَاءَةَ'));
@@ -2496,15 +2570,22 @@ const INK_COLORS = ['#1F3A8A', '#111827', '#C62828', '#2E7D32'];
 
 /* ---------- حفظ الأعمال ---------- */
 const Works = {
+  CAP: 400,
   key(id){ return 'ink_' + String(id).replace(/[^a-zA-Z0-9]+/g, '_'); },
   async load(id){ try{ return await Store.get(this.key(id)); }catch(e){ return Store.lget(this.key(id)); } },
-  lru(k){ try{ let a = JSON.parse(localStorage.getItem(LSP+'inklru') || '[]').filter(x => x !== k); a.unshift(k); const max = S.mode === 'db' ? 25 : 60; a.splice(max).forEach(x => localStorage.removeItem(LSP + x)); localStorage.setItem(LSP+'inklru', JSON.stringify(a)); }catch(e){} },
-  saveDoc(id, doc){ const k = this.key(id); const p = Store.set(k, doc); this.lru(k); return p; },
+  /* النسخ المحلية لأوراق الكتابة: مع القاعدة نُبقي الأحدث فقط (الباقي في الخادم)، ولا تُحذف نسخة لم تصل الخادم بعد */
+  lru(k){ try{ const dm = Store.dirtyMap(); const a = JSON.parse(localStorage.getItem(LSP+'inklru') || '[]').filter(x => x !== k); a.unshift(k); const max = S.mode === 'db' ? 10 : 60; const keep = [];
+    a.forEach((x, i) => { if (i < max || dm[x]) keep.push(x); else localStorage.removeItem(LSP + x); }); localStorage.setItem(LSP+'inklru', JSON.stringify(keep)); }catch(e){} },
+  /* يعيد 'ok' إذا وصلت الخادم، 'wait' إذا حُفظت على الجهاز وتُرفع لاحقًا، 'fail' إذا رفضها الخادم */
+  saveDoc(id, doc){ const k = this.key(id); const p = Store.save(k, doc); this.lru(k); return p; },
+  /* أوراق ما زالت تنتظر تقييم بابا: لا تُحذف مهما كثرت الأوراق بعدها */
+  pendingInk(){ const ids = new Set(); for (const p of (S.child && S.child.pending) || []){ if (p.status !== 'pending') continue; if (p.ink) ids.add(p.ink); for (const q of p.parts || []) if (q.ink) ids.add(q.ink); } return ids; },
   index(id, doc){
     Child.ensure(); const W = S.child.works; const i = W.findIndex(w => w.id === id);
     const meta = { id, path: doc.path || '', label: doc.label || '', page: doc.page || '', ts: doc.ts, n: Ink.count(doc.strokes), pen: !!doc.pen };
     if (i >= 0) W.splice(i, 1); W.unshift(meta);
-    W.splice(150).forEach(d => this.remove(d.id));
+    /* كتاب الفصل فيه ١٦٨ ورقة كتابة: الحدّ يسعها كلها مع أوراق «تمرين» */
+    if (W.length > this.CAP){ const keep = this.pendingInk(); const out = []; W.forEach((w, j) => { if (j < this.CAP || keep.has(w.id)) out.push(w); else this.remove(w.id); }); S.child.works = out; }
     return Child.save();
   },
   async remove(id){ const k = this.key(id); try{ localStorage.removeItem(LSP + k); }catch(e){} try{ if (Store.db) await Store.db.doc(Store.path(k)).delete(); }catch(e){ console.warn('ink delete', e); } }
@@ -2550,7 +2631,25 @@ function inkBlockEl(b, opt){
   return h('div', {});
 }
 
+/* تبسيط الخط عند رفع القلم (Ramer–Douglas–Peucker): نقاط أقل بمرات والشكل نفسه (الانحراف أقل من بكسل واحد على الشاشة).
+   السبب: وثيقة القاعدة حدّها ١ ميغابايت (كل رقم ٨ بايت)، وتلوين صورة بقلم رفيع كان يقترب منه فيفشل الحفظ بصمت. */
+function inkSimplify(p, eps){
+  const n = p.length >> 1; if (n <= 2) return p;
+  const keep = new Uint8Array(n); keep[0] = keep[n - 1] = 1; const st = [0, n - 1]; const e2 = eps * eps;
+  while (st.length){ const b = st.pop(), a = st.pop(); if (b - a < 2) continue;
+    const ax = p[2 * a], ay = p[2 * a + 1], dx = p[2 * b] - ax, dy = p[2 * b + 1] - ay, L = dx * dx + dy * dy; let md = -1, mi = -1;
+    for (let i = a + 1; i < b; i++){ const px = p[2 * i] - ax, py = p[2 * i + 1] - ay; let t = L ? (px * dx + py * dy) / L : 0; t = t < 0 ? 0 : t > 1 ? 1 : t; const ex = px - t * dx, ey = py - t * dy, d = ex * ex + ey * ey; if (d > md){ md = d; mi = i; } }
+    if (md > e2){ keep[mi] = 1; st.push(a, mi, mi, b); } }
+  const out = []; for (let i = 0; i < n; i++) if (keep[i]) out.push(p[2 * i], p[2 * i + 1]); return out;
+}
+/* حجم الورقة في القاعدة تقريبًا */
+function inkBytes(strokes){ let n = 2000; for (const s of strokes) n += 60 + (s.p ? s.p.length * 8 : 0); return n; }
+const INK_MAX_BYTES = 800000;
+
 const Ink = {
+  live: new Set(),
+  /* يحرّر لوحات الرسم التي خرجت من الصفحة (سفاري لا يحرّر ذاكرة الـcanvas وحده بسرعة، وحدّه الكلي محدود) */
+  sweep(){ for (const c of [...this.live]) if (!c.el.isConnected) c.destroy(); },
   penSeen: (() => { try{ return localStorage.getItem(LSP+'pen') === '1'; }catch(e){ return false; } })(),
   count(strokes){ let n = 0; for (const s of strokes || []){ if (s.clr) n = 0; else if (!s.e) n++; } return n; },
   /* يرسم كل الخطوط (بعد آخر «مسح الكل») على سياق مضبوط على الإحداثيات المنطقية */
@@ -2566,6 +2665,7 @@ const Ink = {
     ctx.strokeStyle = s.e ? '#000' : (s.c || INK_COLORS[0]); ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = s.e ? 30 : (s.w || 3.4);
     if (p.length === 2){ ctx.beginPath(); ctx.arc(p[0], p[1], ctx.lineWidth / 2, 0, 6.3); ctx.fill(); return; }
     ctx.beginPath(); ctx.moveTo(p[0], p[1]);
+    if (s.s){ for (let i = 2; i < p.length; i += 2) ctx.lineTo(p[i], p[i + 1]); ctx.stroke(); return; }   /* خط مبسَّط: مضلّع يمرّ بنقاطه نفسها */
     for (let i = 2; i < p.length - 2; i += 2){ const mx = (p[i] + p[i + 2]) / 2, my = (p[i + 1] + p[i + 3]) / 2; ctx.quadraticCurveTo(p[i], p[i + 1], mx, my); }
     ctx.lineTo(p[p.length - 2], p[p.length - 1]); ctx.stroke();
   },
@@ -2601,11 +2701,21 @@ const Ink = {
 
     /* ---------- الحفظ التلقائي ---------- */
     const docOf = () => ({ id: o.id, v: 1, path: o.path || '', label: o.label || '', page: o.page || '', spec, H, strokes, pen: penUsed, ts: Date.now() });
-    let indexed = false;
+    let indexed = false, fullWarned = false;
+    /* إذا كبرت الورقة: ما قبل آخر «مسح الكل» لا يظهر فيُحذف، والخطوط القديمة الكثيفة تُبسَّط */
+    function compact(){
+      if (inkBytes(strokes) < INK_MAX_BYTES) return;
+      let from = 0; for (let i = 0; i < strokes.length; i++) if (strokes[i].clr) from = i + 1;
+      if (from) strokes.splice(0, from);
+      for (const s of strokes) if (s.p && !s.s && s.p.length > 6){ s.p = inkSimplify(s.p, 0.5); s.s = 1; }
+      self.paint(ctx, strokes, H);
+      if (inkBytes(strokes) >= INK_MAX_BYTES && !fullWarned){ fullWarned = true; Log.ev({ k: 'ink_full', id: o.id, bytes: inkBytes(strokes) }); toast('📄 الْوَرَقَةُ امْتَلَأَتْ. اضْغَطِي ✅ خَلَصْتُ.', 5000); }
+    }
     function saveNow(withIndex){
       clearTimeout(saveT); saveT = null; if (readOnly || !dirty) return Promise.resolve();
-      dirty = false; const d = docOf(); const p = Works.saveDoc(o.id, d);
+      dirty = false; compact(); const d = docOf(); const p = Works.saveDoc(o.id, d);
       status.textContent = '✓ حُفِظَتْ كِتَابَتُكِ';
+      p.then(v => { if (v === 'fail' && !destroyed){ status.textContent = '⚠️ لَمْ تُرْفَعِ الْوَرَقَةُ'; Log.ev({ k: 'ink_save_fail', id: o.id, bytes: inkBytes(strokes) }); } });
       if (withIndex || !indexed){ indexed = true; return Promise.all([p, Works.index(o.id, d)]); }
       return p;
     }
@@ -2618,7 +2728,8 @@ const Ink = {
       const d = await Works.load(o.id);
       if (d && Array.isArray(d.strokes)){
         if (readOnly || !o.spec || (d.spec && d.strokes.length)){ if (d.spec && d.spec.length){ spec = d.spec; build(); } }
-        strokes = d.strokes.concat(strokes); penUsed = penUsed || !!d.pen; indexed = true;
+        let old = d.strokes; if (!readOnly){ let from = 0; for (let i = 0; i < old.length; i++) if (old[i].clr) from = i + 1; if (from) old = old.slice(from); }
+        strokes = old.concat(strokes); penUsed = penUsed || !!d.pen; indexed = true;
       }
       loaded = true; if (!destroyed){ layout(); refreshTools(); }
       return d;
@@ -2657,6 +2768,7 @@ const Ink = {
       if (cur && e.pointerId === curId){
         if (e.pointerType === 'pen') lastPenT = Date.now();
         if (e.type === 'pointercancel' && cur.p.length <= 2) strokes.pop();
+        else if (cur.p.length > 6){ const sc = ((view.clientWidth || INK_W) / INK_W) * z; cur.p = inkSimplify(cur.p, 0.55 / Math.max(sc, 0.25)); cur.s = 1; }
         cur = null; curId = null; self.paint(ctx, strokes, H); touch(); refreshTools(); return;
       }
       if (touches.has(e.pointerId)){ touches.delete(e.pointerId); if (pinch && touches.size < 2){ pinch = null; layout(); } }
@@ -2692,9 +2804,11 @@ const Ink = {
     const el = h('div', { class: 'ink' + (readOnly ? ' ro' : '') }, tools, view);
     refreshTools(); setTimeout(() => { if (!destroyed) layout(); }, 0);
 
-    return { el, ready, count: () => self.count(strokes), isPen: () => penUsed, strokes: () => strokes, spec: () => spec, layout,
+    const ctl = { el, ready, count: () => self.count(strokes), isPen: () => penUsed, strokes: () => strokes, spec: () => spec, layout,
       flush: () => saveNow(true),
-      destroy(){ destroyed = true; clearTimeout(saveT); if (ro) ro.disconnect(); document.removeEventListener('visibilitychange', onHide); window.removeEventListener('pagehide', onHide); } };
+      destroy(){ if (destroyed) return; destroyed = true; clearTimeout(saveT); if (ro) ro.disconnect(); document.removeEventListener('visibilitychange', onHide); window.removeEventListener('pagehide', onHide);
+        try{ cv.width = 0; cv.height = 0; }catch(e){} self.live.delete(ctl); } };
+    self.live.add(ctl); return ctl;
   },
   /* عرض للقراءة فقط (لوحة بابا) */
   viewer(id, opts = {}){ const c = this.open({ id, readOnly: true, key: opts.key !== false }); c.ready.then(d => { if (!d) c.el.replaceChildren(h('p', { class: 'tiny' }, '(الكتابة غير متاحة أو حُذفت)')); }); return c.el; }
@@ -2941,6 +3055,7 @@ function renderHome(){
     ...parentBubble(),
     weekPlanBubble(),
     nakhlaBar(),
+    (S.mode==='db' && Store.stuck()) ? h('div',{class:'banner', id:'syncnote'}, '📴 بَعْضُ عَمَلِكِ لَمْ يَصِلْ إِلَى بَابَا بَعْدُ. سَيُرْسَلُ وَحْدَهُ عِنْدَ رُجُوعِ الْإِنْتَرْنِت.') : null,
     S.mode!=='db' ? h('div',{class:'banner'}, S.fb ? '⚠️ لبابا: هذا الجهاز يلعب محليًا. للربط: افتح رابط لوحة بابا ← الإعدادات ← ربط هذا الجهاز بعائلة.' : '⚠️ لبابا: النتائج تنحفظ على هذا الجهاز فقط. افتح الرابط وأنت مسجّل دخولك بحسابك عشان توصل النتائج للوحة.') : null,
     h('div',{class:'grid'},
       worldCard('cintro','🔤', CONTENT.intro.title, kIntroDefs()? 'أَنْشِطَةُ الْمُرَاجَعَةِ فِي كِتَابِي' : 'أَلْعَابٌ سَرِيعَةٌ', Math.round(100*introStars()/introMax()), ()=>go('intro'), false, 'intro'),
@@ -2952,7 +3067,7 @@ function renderHome(){
     h('div',{class:'row center'},
       h('button',{class:'btn btn-green', onclick:async()=>{ await Child.note(`${childName()} تقول: خلصت لعب اليوم! لعبت ${todayMin} دقيقة وعندها ${p.totalStars||0} نجمة.`, 'done'); Log.ev({k:'done_today'}); confettiBurst(); toast('أَرْسَلْتُ لِبَابَا: خَلَصْتُ! 🎉'); }},'خَلَصْتُ الْيَوْمَ! 📨'),
     ),
-    h('p',{class:'tiny', style:'text-align:center'}, S.mode==='db'?'✅ متصل بلوحة بابا':'غير متصل بلوحة بابا'));
+    h('p',{class:'tiny', style:'text-align:center'}, S.mode==='db'? (Store.stuck()? '📴 على هذا الجهاز عمل لم يُرفع للوحة بابا بعد (يُرفع تلقائيًا عند رجوع الإنترنت)' : '✅ متصل بلوحة بابا') : 'غير متصل بلوحة بابا'));
   mount(scr);
 }
 
@@ -3709,7 +3824,7 @@ async function applyBookCode(){
   if(!S.settings || !S.settings.pinHash) return false;
   if(!b){ if(S.settings.bookCode){ try{ localStorage.setItem(LSP+'book', S.settings.bookCode); }catch(e){} } return false; }
   if(S.settings.bookCode===b) return false;
-  S.settings=Object.assign({}, S.settings, {bookCode:b}); BookPages.mem={}; try{ await Store.set('settings', S.settings); }catch(e){} return true;
+  S.settings=Object.assign({}, S.settings, {bookCode:b}); BookPages.mem={}; try{ await Store.save('settings', S.settings); }catch(e){} return true;
 }
 function kCanShow(p){ return !!kPageUrl(p) || !!BookPages.code(); }
 function kMissText(p){ return (!kPageUrl(p) && !BookPages.code())
@@ -3766,9 +3881,9 @@ const KITAB = {
           tip:'أَوَّلًا تَخْتَارِينَ الْمَعْنَى وَالضِّدَّ، ثُمَّ تَكْتُبِينَ فِي صَفْحَةِ كِتَابِكِ بِقَلَمِكِ.',
           steps:[
             {t:'items', skill:'vocab', items:[
-              {t:'mcq', q:'أَخْتَارُ الْمَعْنَى الصَّحِيحَ لِلْكَلِمَةِ:\n(أَشَارَ إِلَيْهِ)', say:'أَشَارَ إِلَيْهِ', opts:['دَلَّ عَلَيْهِ','شَاهَدَهُ'], a:0},
-              {t:'mcq', q:'أَخْتَارُ الْمَعْنَى الصَّحِيحَ لِلْكَلِمَةِ:\n(أَعْتَزُّ)', say:'أَعْتَزُّ', opts:['أَفْتَخِرُ','أُحِبُّ'], a:0},
-              {t:'mcq', q:'أَصِلُ الْكَلِمَةَ بِضِدِّهَا:\n(أُغَيِّرُ)', say:'أُغَيِّرُ', opts:['أُحَافِظُ','أُبَدِّلُ'], a:0},
+              {t:'mcq', q:'اخْتَارِي الْمَعْنَى الصَّحِيحَ لِلْكَلِمَةِ:\n(أَشَارَ إِلَيْهِ)', say:'أَشَارَ إِلَيْهِ', opts:['دَلَّ عَلَيْهِ','شَاهَدَهُ'], a:0},
+              {t:'mcq', q:'اخْتَارِي الْمَعْنَى الصَّحِيحَ لِلْكَلِمَةِ:\n(أَعْتَزُّ)', say:'أَعْتَزُّ', opts:['أَفْتَخِرُ','أُحِبُّ'], a:0},
+              {t:'mcq', q:'صِلِي الْكَلِمَةَ بِضِدِّهَا:\n(أُغَيِّرُ)', say:'أُغَيِّرُ', opts:['أُحَافِظُ','أُبَدِّلُ'], a:0},
             ]},
             {t:'ink', label:'أنمي لغتي — في صفحة الكتاب', spec:[{t:'pg', p:108, y0:.104, y1:.895, x0:.06, x1:.94}],
               say:'اكْتُبِي الْمَعْنَى فِي مَكَانِهِ، وَصِلِي الْكَلِمَةَ بِضِدِّهَا، ثُمَّ أَكْمِلِي خَرِيطَةَ الْمُفْرَدَةِ بِقَلَمِكِ.',
@@ -3945,7 +4060,7 @@ function kTaskStrip(ukey, key){ const U=kUnit(ukey); const s=U && U[key]; return
 function kMerge(into, t){ for (const [k,v] of Object.entries(t||{})){ const s=into[k]||{ok:0,total:0,help:0,shown:0}; s.ok+=v.ok||0; s.total+=v.total||0; s.help+=v.help||0; s.shown+=v.shown||0; into[k]=s; } }
 function kSayBtn(st){ if(!st.say) return null; const b=h('button',{class:'k-sayb', type:'button', 'aria-label':'اسمعي المطلوب', onclick:()=>Say.speakUI(b, st.say)},'🔊'); return b; }
 function kInstr(st, extra){ if(!st.say && !extra) return null; return h('div',{class:'card sand small k-instr'}, kSayBtn(st), h('span',{style:'flex:1;min-width:0'}, st.say||''), extra||null); }
-function kAutoSay(st){ if(st && st.say) setTimeout(()=>{ try{ if(!document.hidden) Say.speak(st.say); }catch(e){} }, 380); }
+function kAutoSay(st){ if(st && st.say) setTimeout(()=>{ try{ if(!document.hidden && !Rec.active) Say.speak(st.say); }catch(e){} }, 380); }
 function kTextSheet(ctx){ const L=ctx.L; if(!L || !L.text) return; Say.stop(); Log.ev({k:'hint', s:ctx.path, it:'book_text'});
   openSheet(h('div',{class:'stack'}, h('h3',{},'📖 نَصُّ الدَّرْسِ مِنْ كِتَابِكِ'), kStrips(L.text), h('button',{class:'btn btn-primary', onclick:closeSheet},'رَجَعْتُ لِلسُّؤَالِ 👍'))); }
 function kVideos(ref){ if(!ref) return null; if(Array.isArray(ref)) return {v:ref, h:[]}; return KITAB.videos[ref]||null; }
@@ -3991,14 +4106,19 @@ function kStepListen(g, st, ctx){
 /* ---------- خطوة: تسجيل صوتها (جواب شفهي / إنشاد) ---------- */
 function kRecorder(g, {head, sendLabel='✅ التَّالِي', skipLabel='⏭️ بِدُونِ تَسْجِيلٍ', allowSkip=true}={}){
   return new Promise(res=>{
-    let session=null, rec=null, iv=null, url=null, done=false;
-    const fin=v=>{ if(done) return; done=true; clearInterval(iv); if(session){ session.cancel(); session=null; } if(url) URL.revokeObjectURL(url); res(v); };
+    let session=null, rec=null, iv=null, url=null, done=false, starting=false;
+    const playerWrap=h('div',{class:'row center'});
+    const hush=()=>{ const a=playerWrap.querySelector('audio'); if(a){ try{ a.pause(); }catch(e){} } };
+    const fin=v=>{ if(done) return; done=true; clearInterval(iv); hush(); if(session){ session.cancel(); session=null; } if(url) URL.revokeObjectURL(url); res(v); };
     g.abortCurrent=r=>fin(r);
-    const timer=h('div',{class:'timer'},'00:00'); const status=h('div',{class:'rec-status'},''); const playerWrap=h('div',{class:'row center'});
+    const timer=h('div',{class:'timer'},'00:00'); const status=h('div',{class:'rec-status'},'');
     g.body.replaceChildren(...kids(head, h('div',{class:'k-recbar'}, status, timer), playerWrap));
-    const idle=()=>{ status.replaceChildren(); timer.textContent='00:00'; playerWrap.replaceChildren();
+    const idle=()=>{ status.replaceChildren(); timer.textContent='00:00'; hush(); playerWrap.replaceChildren();
       g.foot.replaceChildren(h('button',{class:'btn btn-primary', onclick:start},'🎙️ ابْدَئِي التَّسْجِيلَ'), allowSkip? h('button',{class:'btn btn-ghost btn-sm', onclick:()=>fin({skip:true})}, skipLabel):null); };
     async function start(){
+      if (starting || session) return; starting=true; try{ await start1(); }finally{ starting=false; }
+    }
+    async function start1(){
       Say.stop();
       if(!Rec.support()){ Log.ev({k:'mic_unsupported'}); status.replaceChildren(h('div',{class:'banner'},'🎙️ الْمَايْك لَا يَعْمَلُ فِي هَذَا الْمُتَصَفِّحِ. أَكْمِلِي بِدُونِ تَسْجِيلٍ.')); g.foot.replaceChildren(h('button',{class:'btn', onclick:()=>fin({skip:true})},'أُكْمِلُ بِدُونِ تَسْجِيلٍ ←')); return; }
       try{ session=await Rec.start(); }catch(e){ Log.ev({k:'mic_denied', err:String(e&&e.name||e).slice(0,40)}); status.replaceChildren(h('div',{class:'banner'},'🎙️ مَا قَدَرْتُ أَفْتَحُ الْمَايْك. اطْلُبِي مِنْ بَابَا أَنْ يَسْمَحَ لِلْمَايْك، أَوْ أَكْمِلِي بِدُونِ تَسْجِيلٍ.')); g.foot.replaceChildren(h('button',{class:'btn btn-primary', onclick:start},'🔁 جَرِّبِي مَرَّةً ثَانِيَةً'), h('button',{class:'btn', onclick:()=>fin({skip:true})},'أُكْمِلُ بِدُونِ تَسْجِيلٍ ←')); return; }
@@ -4106,16 +4226,19 @@ async function kRunSteps(g, def, ctx){
   }
   if (!parts.length){ const acc = memN? clamp(memN*1.6/Math.max(1,memMoves),0,1) : 1; return {acc, ms, skillTally:tally, total:memN||1}; }
   g.body.replaceChildren(h('div',{class:'result'}, h('div',{class:'big-stars'},'📨'), h('h2',{},'جَارٍ إِرْسَالُ عَمَلِكِ لِبَابَا…'), h('p',{class:'small'},'لَحْظَةً وَاحِدَةً ⏳'))); g.foot.replaceChildren();
-  const out=[];
+  const out=[]; const dones=[];
   for (const p of parts){
-    if (p.kind==='rec'){ let up=null; if(p.rec){ try{ up=await Rec.save(p.rec,{path:ctx.path, kind:'book', text:p.label||stripT(def.title)}); }catch(e){ up=null; } }
-      out.push({kind:'rec', label:p.label||'', audio: up? up.id:null, audioType: up? up.type:null, ms: p.rec? p.rec.ms:0, said: !p.rec, strips:p.strips? kPack(p.strips):null, key:p.key||''}); }
+    if (p.kind==='rec'){ let up=null; if(p.rec){ try{ up=await Rec.save(p.rec,{path:ctx.path, kind:'book', text:p.label||stripT(def.title)}); }catch(e){ up=null; } } if (up && up.done) dones.push(up.done);
+      out.push({kind:'rec', label:p.label||'', audio: up? up.id:null, audioType: up? up.type:null, ms: p.rec? p.rec.ms:0, said: !p.rec, lost: !!(p.rec && !up), strips:p.strips? kPack(p.strips):null, key:p.key||''}); }
     else out.push({kind:'ink', label:p.label||'', ink:p.ink, pen:!!p.pen, n:p.n||0, key:p.key||'', keyStrips:p.keyStrips? kPack(p.keyStrips):null});
   }
   Child.ensure(); S.child.pending=S.child.pending.filter(p=>!(p.type==='book' && p.station===ctx.path && p.status==='pending'));
-  await Child.addPending({type:'book', station:ctx.path, lesson:ctx.lesson||'', unit:ctx.unit||'', title:stripT(def.title), pg:def.pg, parts:out, skill, ms});
-  Log.ev({k:'book_sent', s:ctx.path, recs:out.filter(x=>x.kind==='rec' && x.audio).length, inks:out.filter(x=>x.kind==='ink').length});
-  return {acc:0, ms, pending:true, skillTally:tally, pendingMsgs:['أَرْسَلْتُ عَمَلِي لِبَابَا 📨','بَابَا يَسْمَعُهُ وَيَرَاهُ وَيُعْطِيكِ النُّجُومَ ⭐']};
+  /* العمل يُحفظ على الجهاز فورًا ثم يُرفع. لا نعلّق الشاشة على الشبكة: ننتظر الرفع لحظات، وما لم يصل يُرسل وحده عند رجوعها. */
+  let sent=await Child.addPending({type:'book', station:ctx.path, lesson:ctx.lesson||'', unit:ctx.unit||'', title:stripT(def.title), pg:def.pg, parts:out, skill, ms});
+  if (sent!=='ok' && S.mode==='db' && navigator.onLine!==false && dones.length){ const w=await Store.soft(Promise.all(dones), Store.lagging()? 300 : 6000); if (w==='ok' && !Store.chains.child && !Store.failed.child) sent='ok'; }
+  const synced= sent==='ok' || S.mode!=='db';
+  Log.ev({k:'book_sent', s:ctx.path, recs:out.filter(x=>x.kind==='rec' && x.audio).length, inks:out.filter(x=>x.kind==='ink').length, synced});
+  return {acc:0, ms, pending:true, skillTally:tally, pendingMsgs: synced? ['أَرْسَلْتُ عَمَلِي لِبَابَا 📨','بَابَا يَسْمَعُهُ وَيَرَاهُ وَيُعْطِيكِ النُّجُومَ ⭐'] : ['حَفِظْتُ عَمَلَكِ فِي الْجِهَازِ 📴','سَيَصِلُ إِلَى بَابَا وَحْدَهُ عِنْدَ رُجُوعِ الْإِنْتَرْنِت.']};
 }
 /* يشغّل أي مسار من «كتابي»: درس (u1l1/k-read)، جزء وحدة (u1/k-listen)، المراجعة (intro/k-n1)، أنا أقرأ (lib/k-a1) */
 async function kRun(path){
@@ -4146,7 +4269,7 @@ function kRunUnit(u, key){ return kRun(`${u.key}/${key}`); }
 function kPartsEl(p){
   return h('div',{class:'stack k-parts', style:'gap:10px'}, ...(p.parts||[]).map(q=> q.kind==='rec'
     ? h('div',{class:'k-part'}, h('b',{class:'small'}, '🎙️ ', q.label||''), q.strips? kStrips(q.strips,{cls:'mini'}):null,
-        (q.audio && !isDeleted(q.audio))? audioEl(q.audio) : h('p',{class:'tiny'}, q.audio? '(حُذف التسجيل)' : '(بدون تسجيل صوتي — قالتها شفهيًا)'),
+        (q.audio && !isDeleted(q.audio))? audioEl(q.audio) : h('p',{class:'tiny'}, q.audio? '(حُذف التسجيل)' : q.lost? '(سجّلت صوتها لكن تعذّر حفظ التسجيل)' : '(بدون تسجيل صوتي — قالتها شفهيًا)'),
         q.key? h('p',{class:'small k-key'}, h('b',{},'للتصحيح: '), q.key):null)
     : h('div',{class:'k-part work-card'}, h('b',{class:'small'}, '✏️ ', q.label||''), h('p',{class:'tiny'}, q.pen?'✏️ كتبت بقلم الآيباد':'☝️ كتبت بالإصبع (بدون قلم)', ` · ${q.n||0} خطًّا`),
         (q.inkGone || isDeleted(q.ink))? h('p',{class:'tiny'},'(حُذفت الكتابة)') : Ink.viewer(q.ink),
@@ -4164,7 +4287,7 @@ function bookSettingsCard(){
     h('p',{class:'small'},'كل وحدة ودرس يعرض صفحات كتاب «لغتي» نفسها: تقرأ وتجيب بصوتها وتكتب بقلمها في موضعها من الصفحة، وتصلك للتقييم في «الاعتمادات». ألعاب اللعبة السابقة باقية في تبويب «تمرين».'),
     h('label',{class:'row', style:'gap:8px'}, on, ' عرض محتوى الكتاب (إذا أطفأته ترجع اللعبة كما كانت قبل التحديث)'),
     st, h('div',{class:'field'}, h('label',{for:'s-book'},'رمز صفحات الكتاب الخاصة (يصل تلقائيًا عند فتح الرابط الخاص مرة واحدة)'), inp),
-    h('button',{class:'btn btn-sm', onclick:async()=>{ const v=inp.value.toUpperCase().replace(/[^A-Z0-9]/g,''); S.settings=Object.assign({}, S.settings, {bookCode:v, kitabOff:!on.checked}); BookPages.mem={}; try{ if(v) localStorage.setItem(LSP+'book', v); else localStorage.removeItem(LSP+'book'); }catch(e){} await Store.set('settings', S.settings); toast('حُفظ ✅'); renderParent('settings'); }},'حفظ'));
+    h('button',{class:'btn btn-sm', onclick:async()=>{ const v=inp.value.toUpperCase().replace(/[^A-Z0-9]/g,''); S.settings=Object.assign({}, S.settings, {bookCode:v, kitabOff:!on.checked}); BookPages.mem={}; try{ if(v) localStorage.setItem(LSP+'book', v); else localStorage.removeItem(LSP+'book'); }catch(e){} await Store.save('settings', S.settings); toast('حُفظ ✅'); renderParent('settings'); }},'حفظ'));
 }
 /* تنبيه لبابا في الشاشة الرئيسية إذا لم يصل رمز الصفحات الخاصة بعد */
 function kHomeNote(){
@@ -4222,7 +4345,7 @@ function renderSetup(){
         if(pin1!==pin2){ err.textContent='الرمزان غير متطابقين'; return; }
         const hash=await sha256(pin1);
         S.settings=Object.assign({}, DEFAULT_SETTINGS, S.settings||{}, {childName:nm, pinHash:hash, dailyGoalMin:clamp(parseInt(goal.value)||15,5,60), reward:{name:rwName.value.trim(), stars:clamp(parseInt(rwStars.value)||60,10,500)}, createdAt:Date.now()});
-        await Store.set('settings', S.settings); Log.ev({k:'setup_done'}); toast('تم الإعداد ✅'); if (PARENT_ONLY){ Unlock.set(true); go('parent','hub'); } else go('home');
+        await Store.save('settings', S.settings); Log.ev({k:'setup_done'}); toast('تم الإعداد ✅'); if (PARENT_ONLY){ Unlock.set(true); go('parent','hub'); } else go('home');
       }},'ابْدَأِ الرِّحْلَةَ 🚀'))));
 }
 
@@ -4332,7 +4455,16 @@ function stationName(path){
   return path;
 }
 function skillName(k){ return (CONTENT.skills[k]||{}).name||k||''; }
-function audioEl(id){ const a=h('audio',{controls:'', preload:'none', style:'width:100%;max-width:420px'}); Blobs.url(id).then(u=>{ if(u) a.src=u; else a.replaceWith(h('span',{class:'tiny'},'(التسجيل غير متاح)')); }).catch(()=>{}); return a; }
+/* التسجيل يُحمَّل عند اقتراب بطاقته من الشاشة (لا تُحمَّل عشرات التسجيلات دفعة واحدة على الجوال)،
+   وتُعاد المحاولة إذا لم يكتمل رفعه من جهازها بعد. */
+function audioEl(id){
+  const a=h('audio',{controls:'', preload:'none', style:'width:100%;max-width:420px'}); const wrap=h('span',{class:'aud', style:'display:block'}, a); let tries=0, loading=false;
+  const load=()=>{ if (loading || a.getAttribute('src')) return; loading=true;
+    Blobs.url(id).then(u=>{ loading=false; if (u){ a.src=u; return; } if (++tries<3){ setTimeout(load, 4000*tries); return; }
+      a.replaceWith(h('span',{class:'tiny'}, '(التسجيل غير متاح بعد — ربما لم يكتمل رفعه من جهازها) ', h('button',{class:'btn btn-sm btn-ghost', type:'button', onclick:()=>wrap.replaceWith(audioEl(id))},'🔄 حاول مرة ثانية'))); }).catch(()=>{ loading=false; }); };
+  if (window.IntersectionObserver){ const io=new IntersectionObserver(es=>{ if (es.some(e=>e.isIntersecting)){ io.disconnect(); load(); } }, {rootMargin:'600px 0px'}); io.observe(wrap); } else load();
+  return wrap;
+}
 function imgEl(id, alt){ const im=h('img',{alt:alt||'', loading:'lazy'}); Blobs.url(id).then(u=>{ if(u) im.src=u; }).catch(()=>{}); return im; }
 function recordingsGallery(limit=12){
   Child.ensure(); const recs=(S.child.recordings||[]).filter(r=>!isDeleted(r.id)).slice(0,limit);
@@ -4358,7 +4490,7 @@ function renderParent(tab='hub'){
     ? h('button',{class:'icon-btn', onclick:leave,'aria-label':'قفل اللوحة', title:'قفل اللوحة'},'🔒')
     : h('button',{class:'icon-btn', onclick:leave,'aria-label':'رجوع للعبة', title:'رجوع للعبة'},'🎮');
   const head = !sec
-    ? h('div',{class:'topbar'}, PARENT_ONLY ? null : h('button',{class:'icon-btn', onclick:leave,'aria-label':'رجوع'},'→'), h('div',{style:'flex:1;min-width:0'}, h('h2',{},'👨‍👧 لوحة بابا'), h('p',{class:'tiny'}, 'متابعة ', childName(), ' · ', S.mode==='db'?'🟢 متزامن مع جهازها':'🟡 هذا الجهاز فقط')), PARENT_ONLY ? exitBtn : null)
+    ? h('div',{class:'topbar'}, PARENT_ONLY ? null : h('button',{class:'icon-btn', onclick:leave,'aria-label':'رجوع'},'→'), h('div',{style:'flex:1;min-width:0'}, h('h2',{},'👨‍👧 لوحة بابا'), h('p',{class:'tiny'}, 'متابعة ', childName(), ' · ', S.mode==='db'? (Store.stuck()? '📴 تغييراتك محفوظة هنا وتُرفع عند رجوع الإنترنت' : '🟢 متزامن مع جهازها') : '🟡 هذا الجهاز فقط')), PARENT_ONLY ? exitBtn : null)
     : h('div',{class:'topbar'}, h('button',{class:'icon-btn', onclick:()=>renderParent('hub'), 'aria-label':'رجوع', title:'رجوع للوحة'},'→'), h('div',{style:'flex:1;min-width:0'}, h('h2',{}, sec.icon,' ',sec.title), h('p',{class:'tiny'}, sec.desc)), exitBtn);
   const body=h('div',{class:'stack'}, h('div',{class:'empty'},'جارٍ التحميل…'));
   mount(h('div',{class:'screen'}, head, body));
@@ -4628,15 +4760,15 @@ function tabSettings(){
       h('div',{class:'field'}, h('label',{for:'s-goal'},'الهدف اليومي (دقائق)'), goal),
       h('div',{class:'field'}, h('label',{for:'s-rw'},'المكافأة وعدد النجوم'), rw, rws),
       h('label',{class:'row', style:'gap:8px'}, remind, ' تذكير لطيف إذا فتحت درساً أو وحدة قبل إكمال السابق (لا شيء مقفل، وهدف اليوم في الخطة يُفتح بدون تذكير)'),
-      h('button',{class:'btn btn-primary', onclick:async()=>{ S.settings=Object.assign({},s,{childName:name.value.trim()||s.childName, dailyGoalMin:clamp(parseInt(goal.value)||15,5,60), reward:{name:rw.value.trim(), stars:clamp(parseInt(rws.value)||60,10,500)}, remindPrev:remind.checked}); await Store.set('settings', S.settings); toast('حُفظت الإعدادات ✅'); }},'حفظ')),
+      h('button',{class:'btn btn-primary', onclick:async()=>{ S.settings=Object.assign({},s,{childName:name.value.trim()||s.childName, dailyGoalMin:clamp(parseInt(goal.value)||15,5,60), reward:{name:rw.value.trim(), stars:clamp(parseInt(rws.value)||60,10,500)}, remindPrev:remind.checked}); await Store.save('settings', S.settings); toast('حُفظت الإعدادات ✅'); }},'حفظ')),
     bookSettingsCard(),
     h('div',{class:'card stack'}, h('h3',{},'🛡️ بيانات سديم المحفوظة'),
       h('p',{class:'small'}, `المحفوظ الآن: ${nRec} تسجيلًا صوتيًا · ${nWk} ورقة كتابة · ${nImg} صورة قديمة.`),
       h('div',{class:'field'}, h('label',{for:'s-keep'},'مدة الاحتفاظ بالتسجيلات والكتابة'), keep),
-      h('button',{class:'btn btn-sm', onclick:async()=>{ S.settings=Object.assign({}, S.settings, {retentionDays:parseInt(keep.value)||0}); await Store.set('settings', S.settings); toast('حُفظت مدة الاحتفاظ ✅ — تُطبَّق عند فتح اللعبة على جهازها'); }},'حفظ المدة'),
+      h('button',{class:'btn btn-sm', onclick:async()=>{ S.settings=Object.assign({}, S.settings, {retentionDays:parseInt(keep.value)||0}); await Store.save('settings', S.settings); toast('حُفظت مدة الاحتفاظ ✅ — تُطبَّق عند فتح اللعبة على جهازها'); }},'حفظ المدة'),
       h('p',{class:'tiny'},'الحذف المفرد: من «التقدم» ← تسجيلات صوتها / كتابتها بالقلم، زر 🗑️ بجانب كل عنصر.'),
       h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:()=>openSheet(h('div',{class:'stack'}, h('h3',{},'حذف كل التسجيلات والكتابة'), h('p',{class:'small'},'يُحذف نهائيًا كل ما سُجّل وكُتب حتى هذه اللحظة (النجوم والتقدم لا تتأثر). لا يمكن التراجع.'), h('div',{class:'row'}, h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:async()=>{ closeSheet(); Parent.ensure(); S.parent.deletes=S.parent.deletes||{}; S.parent.deletes.__all=Date.now(); await Parent.save(); const all=[...S.child.recordings.map(r=>['rec',r.id]), ...S.child.handwriting.map(r=>['rec',r.id]), ...S.child.works.map(w=>['ink',w.id])]; for(const [k,id] of all){ S.parent.deletes[id]=Date.now(); try{ if(k==='ink') await Works.remove(id); else await Blobs.delete(id); }catch(e){} } await Parent.save(); toast('حُذف الكل ✅'); renderParent('settings'); }},'🗑️ احذف الكل'), h('button',{class:'btn btn-sm', onclick:closeSheet},'إلغاء'))))},'🗑️ حذف كل التسجيلات والكتابة')),
-    h('div',{class:'card stack'}, h('h3',{},'تغيير الرمز السري'), h('button',{class:'btn', onclick:()=>askPin('أدخل الرمز الجديد', async(hash)=>{ S.settings.pinHash=hash; await Store.set('settings', S.settings); toast('تغيّر الرمز ✅'); }, {setup:true})},'🔐 رمز جديد')),
+    h('div',{class:'card stack'}, h('h3',{},'تغيير الرمز السري'), h('button',{class:'btn', onclick:()=>askPin('أدخل الرمز الجديد', async(hash)=>{ S.settings.pinHash=hash; await Store.save('settings', S.settings); toast('تغيّر الرمز ✅'); }, {setup:true})},'🔐 رمز جديد')),
     (S.blobMode==='fs' || S.fb) ? h('div',{class:'card stack'}, h('h3',{},'🔗 ربط الأجهزة (رمز العائلة)'),
       Family.code() && Family.code()!=='LOCAL' ? h('div',{class:'stack'}, h('p',{class:'small'},'رمز العائلة السري لهذا الجهاز:'), h('p',{class:'ltr', style:'font-size:1.5rem;font-weight:800;letter-spacing:3px;text-align:center'}, Family.code()),
         h('p',{class:'small'},'🎮 رابط اللعبة (لجهاز البنت) — افتحه مرة واحدة على جهازها وبيرتبط تلقائيًا:'), h('p',{class:'ltr tiny', style:'word-break:break-all'}, Family.childLink()),
@@ -4646,7 +4778,7 @@ function tabSettings(){
         h('p',{class:'tiny'},'حالة هذا الجهاز: ', S.mode==='db'?'🟢 متصل ومتزامن':'🟡 غير متصل (تحقق من الإنترنت)'))
       : h('div',{class:'stack'}, h('p',{class:'small'},'هذا الجهاز يلعب محليًا بدون ربط.'), h('button',{class:'btn btn-sm', onclick:()=>{ Family.clear(); location.reload(); }},'ربط هذا الجهاز بعائلة'))) :
     h('div',{class:'card stack'}, h('h3',{},'كيف يعمل الربط؟'), h('p',{class:'small'},'افتح رابط اللعبة على جهاز البنت وأنت مسجّل دخولك بحسابك نفسه (مرة واحدة)، وافتح رابط لوحة بابا على جوالك. كل ما تسويه البنت يوصلك هنا خلال ثوانٍ.'), h('p',{class:'small'}, 'حالة هذا الجهاز: ', S.mode==='db'?'🟢 متصل بقاعدة البيانات':'🟡 محلي فقط (غير مسجّل دخول)')),
-    h('div',{class:'card stack'}, h('h3',{style:'color:var(--bad)'},'منطقة الخطر'), h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:()=>openSheet(h('div',{class:'stack'}, h('h3',{},'تأكيد إعادة التعيين'), h('p',{class:'small'},'سيُمسح التقدم والنجوم وصندوق الأخطاء والاعتمادات والرسائل. الجلسات السابقة تبقى في الأرشيف. الإعدادات والرمز يبقيان.'), h('div',{class:'row'}, h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:async()=>{ S.progress=Progress.blank(); S.mistakes={items:{}}; S.child={pending:[],notes:[],handwriting:[],seenMsgs:{}}; S.parent={messages:[],mission:null,ratings:{},taskConfirms:{},weekPlan:(S.parent||{}).weekPlan||null,lock:(S.parent||{}).lock||null}; await Promise.all([Store.set('progress',S.progress),Store.set('mistakes',S.mistakes),Store.set('child',S.child),Store.set('parent',S.parent)]); closeSheet(); toast('تمت إعادة التعيين'); renderParent('settings'); }},'نعم، امسح'), h('button',{class:'btn btn-sm', onclick:closeSheet},'إلغاء'))))},'🗑️ إعادة تعيين التقدم'))
+    h('div',{class:'card stack'}, h('h3',{style:'color:var(--bad)'},'منطقة الخطر'), h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:()=>openSheet(h('div',{class:'stack'}, h('h3',{},'تأكيد إعادة التعيين'), h('p',{class:'small'},'سيُمسح التقدم والنجوم وصندوق الأخطاء والاعتمادات والرسائل. الجلسات السابقة تبقى في الأرشيف. الإعدادات والرمز يبقيان.'), h('div',{class:'row'}, h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:async()=>{ S.progress=Progress.blank(); S.mistakes={items:{}}; S.child={pending:[],notes:[],handwriting:[],seenMsgs:{}}; S.parent={messages:[],mission:null,ratings:{},taskConfirms:{},weekPlan:(S.parent||{}).weekPlan||null,lock:(S.parent||{}).lock||null}; await Promise.all([Store.save('progress',S.progress),Store.save('mistakes',S.mistakes),Store.save('child',S.child),Store.save('parent',S.parent)]); closeSheet(); toast('تمت إعادة التعيين'); renderParent('settings'); }},'نعم، امسح'), h('button',{class:'btn btn-sm', onclick:closeSheet},'إلغاء'))))},'🗑️ إعادة تعيين التقدم'))
   ];
 }
 
@@ -4703,8 +4835,10 @@ function reviewItems(){
   for (const s2 of CONTENT.library) (s2.qs||[]).forEach(i=>qa(s2.title,i));
   /* ما يُنطق في محطات «كتابي» (ما تسمعه البنت الآن) يُعلَّم بترتيب الكتاب ليُراجَع أولًا */
   const order=new Map(); if (typeof kSpokenTexts==='function'){ for (const t of kSpokenTexts()){ const k=Say.keyOf(t); if (k && !order.has(k)) order.set(k, order.size); } }
-  const PREV=(typeof REV_PREV==='undefined')? {} : REV_PREV;
-  for (const it of out){ it.id=revId(it); it.prev=PREV[it.id]||null; if (it.key){ it.tok=String(A[it.key]||'').replace(/\.[a-z0-9]+(\?.*)?$/i,'').slice(-8)||1; if (order.has(it.key)) it.book=order.get(it.key); } else it.tok=1; }
+  const PREV=(typeof REV_PREV==='undefined')? {} : REV_PREV, PREVQ=(typeof REV_PREV_Q==='undefined')? {} : REV_PREV_Q;
+  for (const it of out){ it.id=revId(it); it.prev=PREV[it.id]||null;
+    if (it.kind==='qa' && PREVQ[it.text]) it.prev=PREVQ[it.text].map(o=>revId({kind:'qa', text:N(o), sub:it.sub}));   /* سؤال صُحّح نصّه: نفس الجواب والدرس */
+    if (it.key){ it.tok=String(A[it.key]||'').replace(/\.[a-z0-9]+(\?.*)?$/i,'').slice(-8)||1; if (order.has(it.key)) it.book=order.get(it.key); } else it.tok=1; }
   return out;
 }
 function revId(it){ let x=5381; const t=it.kind[0]+it.text+it.sub; for(let i=0;i<t.length;i++) x=((x<<5)+x+t.charCodeAt(i))>>>0; return x.toString(36); }
@@ -4828,6 +4962,7 @@ function tabReview(){
 }
 
 /* ===================== الإقلاع ===================== */
+const STALE_MS = window.STALE_MS || 15*60*1000;   /* مدة الغياب التي تُعاد بعدها تحميل صفحة اللعبة */
 async function boot(){
   TTS.init(); Say.init(); mountClock(); captureBookCode();
   if (window.PREVIEW) await previewSeed();
@@ -4847,7 +4982,7 @@ async function boot(){
       if (remote) S[k]=remote;
       else if (local && ((k==='settings'&&local.pinHash)||(k==='progress'&&local.totalStars>0)||(k==='mistakes'&&Object.keys(local.items||{}).length)||(k==='child'&&(local.pending||[]).length)||(k==='parent'&&(local.messages||[]).length))) pushLocal.push(k);
     });
-    for (const k of pushLocal) await Store.set(k, S[k]);
+    for (const k of pushLocal) await Store.save(k, S[k]);
     Progress.ensure(); Mistakes.ensure(); Child.ensure(); Parent.ensure();
     /* لا يُعاد رسم الرئيسية إذا كانت محطة شغّالة (المحطات التي تُفتح من الرئيسية تبقي S.screen='home')، وإلا انهدمت المحطة تحت يدها */
     const idle=()=>!document.querySelector('.game');
@@ -4856,6 +4991,10 @@ async function boot(){
     Store.subscribe('settings', d=>{ if(d){ const had=BookPages.code(); S.settings=d; if(BookPages.code()!==had) BookPages.mem={}; if(S.screen==='home' && idle()) render(); } });
     if (!S.settings || !S.settings.pinHash) S.screen='setup'; else if (S.screen==='setup') S.screen='home';
     if (!document.querySelector('.game')) render();
+    /* تنبيه «لم يُرفع بعد» في الرئيسية: يظهر إذا بقي على الجهاز ما لم يصل الخادم أكثر من ثوانٍ، ويختفي عند وصوله */
+    let syncT=null; const syncUI=()=>{ if (PARENT_ONLY || S.screen!=='home' || !idle()) return; if (!!document.getElementById('syncnote')!==Store.stuck()) render(); };
+    Store.onSync=on=>{ clearTimeout(syncT); if (on) syncT=setTimeout(syncUI, 8700); else syncUI(); };
+    Store._watch(); Store.reconcile();   /* ما بقي من جلسة سابقة ولم يُرفع */
   }
   /* رمز صفحات الكتاب الخاصة: يُحفظ في إعدادات العائلة فيصل لكل الأجهزة */
   try{ if (await applyBookCode()){ toast('📘 أُضيفت صفحات الكتاب ✅'); if (!document.querySelector('.game') && S.screen==='home') render(); } }catch(e){ console.warn('book code', e); }
@@ -4868,6 +5007,16 @@ async function boot(){
   }
   try{ Log.ev({k:'open'}); }catch(e){}
   Lock.sync(); document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) Lock.sync(); });   /* مؤقت الفتح التلقائي + القفل الذي وصل والجهاز نائم */
+  /* صفحة تُركت مفتوحة طويلًا (الآيباد بعد نومه، أو تبويب قديم على جهاز آخر): تُعاد تحميلها عند الرجوع إليها،
+     حتى لا تكتب بيانات قديمة فوق الأحدث ولتصلها آخر نسخة من اللعبة. لا يحدث ذلك داخل محطة ولا بدون إنترنت. */
+  let hiddenAt=0;
+  document.addEventListener('visibilitychange', ()=>{
+    if (document.hidden){ hiddenAt=Date.now(); return; }
+    const away= hiddenAt? Date.now()-hiddenAt : 0; hiddenAt=0;
+    if (away < STALE_MS || document.querySelector('.game') || _sheet || S.screen==='setup' || S.screen==='parent') return;
+    if (navigator.onLine===false || Object.values(Store.chains).some(Boolean)) return;
+    fetch(location.href, {method:'HEAD', cache:'no-store'}).then(r=>{ if (r.ok && !document.hidden && !document.querySelector('.game') && !_sheet) location.reload(); }).catch(()=>{});
+  });
   await applyParentRatings();
   /* نسخة التجربة: ‎?go=u3 يفتح الوحدة مباشرة */
   if (window.PREVIEW){ try{ const u=new URL(location.href); const gk=u.searchParams.get('go'); if(gk){ u.searchParams.delete('go'); history.replaceState(null,'',u.pathname+u.search+u.hash); if(/^u\d$/.test(gk) && S.screen==='home' && !document.querySelector('.game')) go('unit', gk); } }catch(e){} }
