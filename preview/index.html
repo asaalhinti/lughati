@@ -476,6 +476,8 @@ audio{width:100%;max-width:520px;height:44px}
 .lockrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px}
 .lockrow.on{background:#FDECEC;border-color:var(--bad)}
 .lockrow .need-b{flex:1;min-width:170px;display:flex;flex-direction:column}
+/* سحب الصفحة للأسفل في سفاري يعيد تحميلها (فتضيع محطة لم تنتهِ): نمنع الارتداد عند طرفي الصفحة */
+html,body{overscroll-behavior-y:none}
 
 </style>
 </head>
@@ -1792,6 +1794,8 @@ const Say = {
 
 /* ===================== تسجيل صوت الطفلة ===================== */
 const Rec = {
+  /* هل يوجد تسجيل جارٍ الآن؟ (بحدّ زمني حتى لا يسكت صوت التعليمات لو تعطّل العدّاد) */
+  busy(){ return (this.active||0)>0 && Date.now()-(this.activeAt||0) < 300000; },
   support(){ return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder); },
   mime(){ for (const m of ['audio/mp4','audio/webm;codecs=opus','audio/webm']) { try{ if (MediaRecorder.isTypeSupported(m)) return m; }catch(e){} } return ''; },
   async start(){
@@ -1801,9 +1805,11 @@ const Rec = {
     mr.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
     mr.start(500);
     /* active = عدد التسجيلات الجارية الآن (لا يُشغَّل صوت التعليمة تلقائيًا فوق تسجيلها) */
-    let live=true; Rec.active=(Rec.active||0)+1; const off=()=>{ if(live){ live=false; Rec.active=Math.max(0,(Rec.active||1)-1); } stream.getTracks().forEach(t=>t.stop()); };
+    let live=true; Rec.active=(Rec.active||0)+1; Rec.activeAt=Date.now(); const off=()=>{ if(live){ live=false; Rec.active=Math.max(0,(Rec.active||1)-1); } stream.getTracks().forEach(t=>t.stop()); };
     return { mr, stream,
-      stop(){ return new Promise(res=>{ if(mr.state==='inactive'){ off(); return res(null); } mr.onstop=()=>{ off(); const type=((mr.mimeType||mime||'audio/webm').split(';')[0]); res({blob:new Blob(chunks,{type}), type, ms:Date.now()-t0}); }; try{ mr.stop(); }catch(e){ off(); res(null); } }); },
+      /* إن لم يصل حدث الإيقاف من المتصفح خلال ثوانٍ نُنهي بما سُجِّل حتى لا تقف الطفلة عند «خلصت» */
+      stop(){ return new Promise(res=>{ if(mr.state==='inactive'){ off(); return res(null); } let fin=false; const end=()=>{ if(fin) return; fin=true; off(); const type=((mr.mimeType||mime||'audio/webm').split(';')[0]); res({blob:new Blob(chunks,{type}), type, ms:Date.now()-t0}); };
+        mr.onstop=end; try{ mr.stop(); setTimeout(end, 3000); }catch(e){ fin=true; off(); res(null); } }); },
       cancel(){ try{ mr.onstop=null; if(mr.state!=='inactive') mr.stop(); }catch(e){} off(); }
     };
   },
@@ -1945,6 +1951,8 @@ const Store = {
       S.fb = !!FB;
       const code = Family.code();
       if (FB && code && code!=='LOCAL' && code.length>=10){ try{ this.db = fbAdapter(FB, code); S.mode='db'; S.blobMode='fs'; S.assets = Blobs; }catch(e){ console.warn('firebase init', e); this.db=null; } }
+      /* جهاز مربوط بعائلة لكن القاعدة لم تُحمَّل (فُتحت الصفحة بلا إنترنت): ما يُحفظ الآن يُعلَّم «لم يُرفع» ليُعتمد ويُرفع عند الفتح القادم */
+      if (!this.db && code && code!=='LOCAL' && code.length>=10) this.offlineLinked=true;
     }
     return S.mode;
   },
@@ -1964,7 +1972,7 @@ const Store = {
   /* يعيد وعدًا يكتمل عند تأكيد الخادم — بدون شبكة لا يكتمل حتى ترجع، فلا تنتظره الواجهة مباشرة (استعمل save) */
   set(k, data){
     const okL=this.lset(k, data);
-    if (!this.db) return Promise.resolve();
+    if (!this.db){ if (this.offlineLinked) this.mark(k, okL); return Promise.resolve(); }
     this.mark(k, okL);   /* إن تعذّرت الكتابة المحلية (تخزين ممتلئ) فالنسخة المحلية قديمة: لا تُعتمد عند الإقلاع */
     this.pending[k] = JSON.parse(JSON.stringify(data));
     if (!this.chains[k]) this.chains[k] = this._drain(k);
@@ -2443,7 +2451,10 @@ async function finishStation(g, info){
   else await Progress.save();
   Log.station({s:info.path, stars: info.pending?0:stars, acc: Math.round((info.acc||0)*100), ms:info.ms, pending:!!info.pending, extra:info.extra||null}); g.done=true; g.cur=null;
   if (stars===3 && !info.pending && !info.simple) confettiBurst();
-  const msgs = info.pending ? (info.pendingMsgs || ['أَرْسَلْتُ النَّتِيجَةَ لِبَابَا 📨','بَابَا سَيَسْمَعُكِ وَيُعْطِيكِ النُّجُومَ.']) :
+  /* العمل المرسل لبابا ولم يصل الخادم بعد (بلا إنترنت): نقول الحقيقة — محفوظ في الجهاز ويُرسل وحده */
+  const unsynced = info.pending && (info.unsynced || !!Store.offlineLinked || (S.mode==='db' && (navigator.onLine===false || Store.lagging())));
+  const msgs = unsynced ? ['حَفِظْتُ عَمَلَكِ فِي الْجِهَازِ 📴','سَيَصِلُ إِلَى بَابَا وَحْدَهُ عِنْدَ رُجُوعِ الْإِنْتَرْنِت.'] :
+    info.pending ? (info.pendingMsgs || ['أَرْسَلْتُ النَّتِيجَةَ لِبَابَا 📨','بَابَا سَيَسْمَعُكِ وَيُعْطِيكِ النُّجُومَ.']) :
     info.simple ? ['تَمَام! 👍','نُكْمِلُ الرِّحْلَةَ 🚀'] :
     stars===3 ? ['مُمْتَازَة! 🌟🌟🌟', 'نَخْلَتُكِ كَبُرَتْ! 🌴'] : stars===2 ? ['أَحْسَنْتِ! 🌟🌟','بَقِيَ الْقَلِيلُ لِلنَّجْمَةِ الثَّالِثَةِ!'] : ['أَكْمَلْتِ اللُّعْبَةَ 🌟','كُلَّمَا لَعِبْتِ أَكْثَرَ صَارَ أَسْهَلَ! 💪'];
   return new Promise(res=>{
@@ -2818,8 +2829,10 @@ const Ink = {
 /* تعرض الورقة، وتحفظ تلقائيًا، وعند «خلصت» تعيد {id,n,pen}. الخروج قبل الإكمال لا يُضيّع ما كُتب. */
 function inkStep(g, { id, spec, path, label, page, intro, min = 2, done = '✅ خَلَصْتُ — أَرْسِلِي لِبَابَا' }){
   return new Promise(res => {
-    const pad = Ink.open({ id, spec, path, label, page });
-    const finish = async r => { g.abortCurrent = null; try{ await pad.flush(); }catch(e){} pad.destroy(); res(r); };
+    const pad = Ink.open({ id, spec, path, label, page }); let ending = false;
+    /* الكتابة محفوظة على الجهاز فورًا: لا ننتظر رفعها أكثر من لحظة حتى لا تقف الطفلة عند «خلصت» */
+    const finish = async r => { if (ending) return; ending = true; g.abortCurrent = null; const b = document.getElementById('ink-done'); if (b) b.disabled = true;
+      try{ await Promise.race([pad.flush(), sleep(1200)]); }catch(e){} pad.destroy(); res(r); };
     g.abortCurrent = r => finish(r);
     Log.ev({ k: 'ink_open', s: path, id });
     g.body.replaceChildren(...kids(intro ? h('div', { class: 'card sand small' }, intro) : null, pad.el));
@@ -3056,6 +3069,7 @@ function renderHome(){
     weekPlanBubble(),
     nakhlaBar(),
     (S.mode==='db' && Store.stuck()) ? h('div',{class:'banner', id:'syncnote'}, '📴 بَعْضُ عَمَلِكِ لَمْ يَصِلْ إِلَى بَابَا بَعْدُ. سَيُرْسَلُ وَحْدَهُ عِنْدَ رُجُوعِ الْإِنْتَرْنِت.') : null,
+    (S.mode!=='db' && Store.offlineLinked) ? h('div',{class:'banner', id:'offnote'}, '📴 لَا يُوجَدُ إِنْتَرْنِت الْآنَ. عَمَلُكِ يُحْفَظُ فِي الْجِهَازِ، وَيُرْسَلُ إِلَى بَابَا عِنْدَ رُجُوعِ الْإِنْتَرْنِت.') :
     S.mode!=='db' ? h('div',{class:'banner'}, S.fb ? '⚠️ لبابا: هذا الجهاز يلعب محليًا. للربط: افتح رابط لوحة بابا ← الإعدادات ← ربط هذا الجهاز بعائلة.' : '⚠️ لبابا: النتائج تنحفظ على هذا الجهاز فقط. افتح الرابط وأنت مسجّل دخولك بحسابك عشان توصل النتائج للوحة.') : null,
     h('div',{class:'grid'},
       worldCard('cintro','🔤', CONTENT.intro.title, kIntroDefs()? 'أَنْشِطَةُ الْمُرَاجَعَةِ فِي كِتَابِي' : 'أَلْعَابٌ سَرِيعَةٌ', Math.round(100*introStars()/introMax()), ()=>go('intro'), false, 'intro'),
@@ -4060,7 +4074,7 @@ function kTaskStrip(ukey, key){ const U=kUnit(ukey); const s=U && U[key]; return
 function kMerge(into, t){ for (const [k,v] of Object.entries(t||{})){ const s=into[k]||{ok:0,total:0,help:0,shown:0}; s.ok+=v.ok||0; s.total+=v.total||0; s.help+=v.help||0; s.shown+=v.shown||0; into[k]=s; } }
 function kSayBtn(st){ if(!st.say) return null; const b=h('button',{class:'k-sayb', type:'button', 'aria-label':'اسمعي المطلوب', onclick:()=>Say.speakUI(b, st.say)},'🔊'); return b; }
 function kInstr(st, extra){ if(!st.say && !extra) return null; return h('div',{class:'card sand small k-instr'}, kSayBtn(st), h('span',{style:'flex:1;min-width:0'}, st.say||''), extra||null); }
-function kAutoSay(st){ if(st && st.say) setTimeout(()=>{ try{ if(!document.hidden && !Rec.active) Say.speak(st.say); }catch(e){} }, 380); }
+function kAutoSay(st){ if(st && st.say) setTimeout(()=>{ try{ if(!document.hidden && !Rec.busy()) Say.speak(st.say); }catch(e){} }, 380); }
 function kTextSheet(ctx){ const L=ctx.L; if(!L || !L.text) return; Say.stop(); Log.ev({k:'hint', s:ctx.path, it:'book_text'});
   openSheet(h('div',{class:'stack'}, h('h3',{},'📖 نَصُّ الدَّرْسِ مِنْ كِتَابِكِ'), kStrips(L.text), h('button',{class:'btn btn-primary', onclick:closeSheet},'رَجَعْتُ لِلسُّؤَالِ 👍'))); }
 function kVideos(ref){ if(!ref) return null; if(Array.isArray(ref)) return {v:ref, h:[]}; return KITAB.videos[ref]||null; }
@@ -4235,10 +4249,10 @@ async function kRunSteps(g, def, ctx){
   Child.ensure(); S.child.pending=S.child.pending.filter(p=>!(p.type==='book' && p.station===ctx.path && p.status==='pending'));
   /* العمل يُحفظ على الجهاز فورًا ثم يُرفع. لا نعلّق الشاشة على الشبكة: ننتظر الرفع لحظات، وما لم يصل يُرسل وحده عند رجوعها. */
   let sent=await Child.addPending({type:'book', station:ctx.path, lesson:ctx.lesson||'', unit:ctx.unit||'', title:stripT(def.title), pg:def.pg, parts:out, skill, ms});
-  if (sent!=='ok' && S.mode==='db' && navigator.onLine!==false && dones.length){ const w=await Store.soft(Promise.all(dones), Store.lagging()? 300 : 6000); if (w==='ok' && !Store.chains.child && !Store.failed.child) sent='ok'; }
-  const synced= sent==='ok' || S.mode!=='db';
+  if (sent!=='ok' && S.mode==='db' && navigator.onLine!==false && dones.length){ const w=await Store.soft(Promise.all(dones), Store.syncing? Math.max(300, Math.min(6000, 4300-(Date.now()-Store.syncSince))) : 6000); if (w==='ok' && !Store.chains.child && !Store.failed.child) sent='ok'; }
+  const synced= !Store.offlineLinked && (sent==='ok' || S.mode!=='db');
   Log.ev({k:'book_sent', s:ctx.path, recs:out.filter(x=>x.kind==='rec' && x.audio).length, inks:out.filter(x=>x.kind==='ink').length, synced});
-  return {acc:0, ms, pending:true, skillTally:tally, pendingMsgs: synced? ['أَرْسَلْتُ عَمَلِي لِبَابَا 📨','بَابَا يَسْمَعُهُ وَيَرَاهُ وَيُعْطِيكِ النُّجُومَ ⭐'] : ['حَفِظْتُ عَمَلَكِ فِي الْجِهَازِ 📴','سَيَصِلُ إِلَى بَابَا وَحْدَهُ عِنْدَ رُجُوعِ الْإِنْتَرْنِت.']};
+  return {acc:0, ms, pending:true, unsynced:!synced, skillTally:tally, pendingMsgs:['أَرْسَلْتُ عَمَلِي لِبَابَا 📨','بَابَا يَسْمَعُهُ وَيَرَاهُ وَيُعْطِيكِ النُّجُومَ ⭐']};
 }
 /* يشغّل أي مسار من «كتابي»: درس (u1l1/k-read)، جزء وحدة (u1/k-listen)، المراجعة (intro/k-n1)، أنا أقرأ (lib/k-a1) */
 async function kRun(path){
@@ -4462,7 +4476,10 @@ function audioEl(id){
   const load=()=>{ if (loading || a.getAttribute('src')) return; loading=true;
     Blobs.url(id).then(u=>{ loading=false; if (u){ a.src=u; return; } if (++tries<3){ setTimeout(load, 4000*tries); return; }
       a.replaceWith(h('span',{class:'tiny'}, '(التسجيل غير متاح بعد — ربما لم يكتمل رفعه من جهازها) ', h('button',{class:'btn btn-sm btn-ghost', type:'button', onclick:()=>wrap.replaceWith(audioEl(id))},'🔄 حاول مرة ثانية'))); }).catch(()=>{ loading=false; }); };
-  if (window.IntersectionObserver){ const io=new IntersectionObserver(es=>{ if (es.some(e=>e.isIntersecting)){ io.disconnect(); load(); } }, {rootMargin:'600px 0px'}); io.observe(wrap); } else load();
+  /* إن لم يعمل مراقب الظهور (صفحة في الخلفية مثلًا) يُحمَّل التسجيل بعد لحظات، وكذلك عند لمس المشغّل */
+  if (window.IntersectionObserver){ let seen=false; const io=new IntersectionObserver(es=>{ seen=true; if (es.some(e=>e.isIntersecting)){ io.disconnect(); load(); } }, {rootMargin:'600px 0px'}); io.observe(wrap);
+    setTimeout(()=>{ if (!seen && wrap.isConnected){ io.disconnect(); load(); } }, 2500); } else load();
+  wrap.addEventListener('pointerdown', load);
   return wrap;
 }
 function imgEl(id, alt){ const im=h('img',{alt:alt||'', loading:'lazy'}); Blobs.url(id).then(u=>{ if(u) im.src=u; }).catch(()=>{}); return im; }
@@ -4474,7 +4491,7 @@ function recordingsGallery(limit=12){
 }
 /* ---------- الحذف ---------- */
 function isDeleted(id){ Parent.ensure(); const d=S.parent.deletes||{}; return !!d[id]; }
-async function parentDelete(kind, id){ Parent.ensure(); S.parent.deletes=S.parent.deletes||{}; S.parent.deletes[id]=Date.now(); await Parent.save(); try{ if(kind==='ink') await Works.remove(id); else await Blobs.delete(id); }catch(e){} Log.ev({k:'parent_delete', kind}); }
+async function parentDelete(kind, id){ Parent.ensure(); S.parent.deletes=S.parent.deletes||{}; S.parent.deletes[id]=Date.now(); await Parent.save(); try{ Promise.resolve(kind==='ink'? Works.remove(id) : Blobs.delete(id)).catch(()=>{}); }catch(e){} Log.ev({k:'parent_delete', kind}); }   /* الحذف من القاعدة لا يُنتظر (بدون شبكة يُنفَّذ عند رجوعها) */
 function delBtn(kind, id, label){ return h('button',{class:'btn btn-sm btn-ghost', style:'color:var(--bad);align-self:flex-start', onclick:()=>openSheet(h('div',{class:'stack'}, h('h3',{},'تأكيد الحذف'), h('p',{class:'small'},'يُحذف نهائيًا من القاعدة ولا يمكن استرجاعه.'), h('div',{class:'row'}, h('button',{class:'btn btn-sm', style:'border-color:var(--bad);color:var(--bad)', onclick:async()=>{ closeSheet(); await parentDelete(kind,id); toast('حُذف ✅'); renderParent(S.nav[0]); }},'🗑️ احذف'), h('button',{class:'btn btn-sm', onclick:closeSheet},'إلغاء'))))}, '🗑️ '+(label||'حذف')); }
 function worksGallery(limit=20){
   Child.ensure(); const ws=(S.child.works||[]).filter(w=>!isDeleted(w.id)).slice(0,limit);
@@ -4490,7 +4507,7 @@ function renderParent(tab='hub'){
     ? h('button',{class:'icon-btn', onclick:leave,'aria-label':'قفل اللوحة', title:'قفل اللوحة'},'🔒')
     : h('button',{class:'icon-btn', onclick:leave,'aria-label':'رجوع للعبة', title:'رجوع للعبة'},'🎮');
   const head = !sec
-    ? h('div',{class:'topbar'}, PARENT_ONLY ? null : h('button',{class:'icon-btn', onclick:leave,'aria-label':'رجوع'},'→'), h('div',{style:'flex:1;min-width:0'}, h('h2',{},'👨‍👧 لوحة بابا'), h('p',{class:'tiny'}, 'متابعة ', childName(), ' · ', S.mode==='db'? (Store.stuck()? '📴 تغييراتك محفوظة هنا وتُرفع عند رجوع الإنترنت' : '🟢 متزامن مع جهازها') : '🟡 هذا الجهاز فقط')), PARENT_ONLY ? exitBtn : null)
+    ? h('div',{class:'topbar'}, PARENT_ONLY ? null : h('button',{class:'icon-btn', onclick:leave,'aria-label':'رجوع'},'→'), h('div',{style:'flex:1;min-width:0'}, h('h2',{},'👨‍👧 لوحة بابا'), h('p',{class:'tiny'}, 'متابعة ', childName(), ' · ', S.mode==='db'? (Store.stuck()? '📴 تغييراتك محفوظة هنا وتُرفع عند رجوع الإنترنت' : '🟢 متزامن مع جهازها') : (Store.offlineLinked? '📴 بدون إنترنت الآن' : '🟡 هذا الجهاز فقط'))), PARENT_ONLY ? exitBtn : null)
     : h('div',{class:'topbar'}, h('button',{class:'icon-btn', onclick:()=>renderParent('hub'), 'aria-label':'رجوع', title:'رجوع للوحة'},'→'), h('div',{style:'flex:1;min-width:0'}, h('h2',{}, sec.icon,' ',sec.title), h('p',{class:'tiny'}, sec.desc)), exitBtn);
   const body=h('div',{class:'stack'}, h('div',{class:'empty'},'جارٍ التحميل…'));
   mount(h('div',{class:'screen'}, head, body));
@@ -4971,6 +4988,8 @@ async function boot(){
   if (!S.settings || !S.settings.pinHash) S.screen='setup'; else S.screen='home';
   render();
   const mode = await Store.init();
+  /* جهاز مربوط فُتح بلا إنترنت: عند رجوع الشبكة تُعاد تحميل الصفحة (خارج المحطات) ليتصل بالقاعدة ويرفع ما حُفظ */
+  if (Store.offlineLinked){ const back=()=>{ if (!document.querySelector('.game') && !_sheet) location.reload(); }; window.addEventListener('online', back); document.addEventListener('visibilitychange', ()=>{ if (!document.hidden && navigator.onLine!==false) fetch(location.href,{method:'HEAD', cache:'no-store'}).then(r=>{ if (r.ok) back(); }).catch(()=>{}); }); render(); }
   /* النسخة المستقلة: إذا Firebase جاهز ولا يوجد رمز عائلة بعد → شاشة الرمز */
   if (mode!=='db' && S.fb && !Family.code()){ renderFamilyGate(); return; }
   if (mode==='db'){
